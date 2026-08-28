@@ -1,0 +1,6 @@
+{
+  "name": "Surat Resmi Generator",
+  "description": "Generator surat resmi Indonesia berdasarkan input data.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
