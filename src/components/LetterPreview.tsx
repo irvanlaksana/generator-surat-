@@ -28,7 +28,7 @@ export default function LetterPreview({ data }: LetterPreviewProps) {
         <div className="max-w-[210mm] min-h-[330mm] mx-auto bg-white pt-[10mm] px-[20mm] pb-[35mm] shadow-[0_20px_50px_rgba(0,0,0,0.08)] border border-[#E5E5E0] font-serif print:shadow-none print:border-none print:p-0 print:pt-[10mm] print:px-[20mm] print:pb-[35mm] print:m-0 print:max-w-none print:min-h-[330mm] text-[15px] leading-snug">
           
           {/* Kop Surat Image */}
-          <div className="mb-8">
+          <div style={{ marginTop: `${data.kopImageOffsetY}px`, marginBottom: `${data.kopImageMarginBottom}px` }}>
             {data.kopImage ? (
               <img 
                 src={data.kopImage} 
@@ -182,12 +182,18 @@ export default function LetterPreview({ data }: LetterPreviewProps) {
         </div>
 
         {/* Lampiran Images Page */}
-        {(data.attachmentImages && data.attachmentImages.length > 0) && (
+        {(data.attachments && data.attachments.length > 0) && (
           <div className="max-w-[210mm] min-h-[330mm] mx-auto bg-white pt-[10mm] px-[20mm] pb-[35mm] shadow-[0_20px_50px_rgba(0,0,0,0.08)] border border-[#E5E5E0] font-serif print:shadow-none print:border-none print:p-0 print:pt-[10mm] print:px-[20mm] print:pb-[35mm] print:m-0 print:max-w-none print:min-h-[330mm] mt-8 print:mt-0 print:break-before-page">
             <h3 className="font-bold text-lg mb-6 text-center underline">Lampiran</h3>
             <div className="flex flex-col items-center gap-8">
-              {data.attachmentImages.map((img, idx) => (
-                <img key={idx} src={img} alt={`Lampiran ${idx + 1}`} className="max-w-full max-h-[400px] object-contain border-2 border-dashed border-[#D1D1CA] p-2" />
+              {data.attachments.map((att, idx) => (
+                <img 
+                  key={idx} 
+                  src={att.url} 
+                  alt={`Lampiran ${idx + 1}`} 
+                  style={{ width: `${att.width}px`, height: `${att.height}px` }}
+                  className="object-contain border-2 border-dashed border-[#D1D1CA] p-2" 
+                />
               ))}
             </div>
           </div>

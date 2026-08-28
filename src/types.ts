@@ -1,8 +1,16 @@
+export interface AttachmentData {
+  url: string;
+  width: number;
+  height: number;
+}
+
 export interface LetterData {
   kopImage: string | null;
   kopImageHeight: number;
   kopImageFit: 'contain' | 'fill' | 'cover';
   kopImageAlign: 'left' | 'center' | 'right';
+  kopImageOffsetY: number;
+  kopImageMarginBottom: number;
   kopCompanyName: string;
   letterNumber: string;
   assignerName: string;
@@ -18,7 +26,7 @@ export interface LetterData {
   customerInstallment: string;
   customerPenalty: string;
   customerUnpaidInstallmentCount: string;
-  attachmentImages: string[];
+  attachments: AttachmentData[];
   vehicleBrand: string;
   vehiclePlate: string;
   validFrom: string;

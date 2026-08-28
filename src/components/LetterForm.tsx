@@ -29,15 +29,15 @@ export default function LetterForm({ data, onChange }: LetterFormProps) {
     if (!files) return;
     
     let processed = 0;
-    const newImages: string[] = [];
+    const newAttachments: { url: string, width: number, height: number }[] = [];
     
     Array.from(files).forEach(file => {
       const reader = new FileReader();
       reader.onloadend = () => {
-        newImages.push(reader.result as string);
+        newAttachments.push({ url: reader.result as string, width: 600, height: 400 });
         processed++;
         if (processed === files.length) {
-          onChange({ ...data, attachmentImages: [...(data.attachmentImages || []), ...newImages] });
+          onChange({ ...data, attachments: [...(data.attachments || []), ...newAttachments] });
         }
       };
       reader.readAsDataURL(file);
@@ -45,9 +45,15 @@ export default function LetterForm({ data, onChange }: LetterFormProps) {
   };
 
   const removeAttachment = (index: number) => {
-    const newAttachments = [...(data.attachmentImages || [])];
+    const newAttachments = [...(data.attachments || [])];
     newAttachments.splice(index, 1);
-    onChange({ ...data, attachmentImages: newAttachments });
+    onChange({ ...data, attachments: newAttachments });
+  };
+
+  const updateAttachmentDimension = (index: number, field: 'width' | 'height', value: number) => {
+    const newAttachments = [...(data.attachments || [])];
+    newAttachments[index] = { ...newAttachments[index], [field]: value };
+    onChange({ ...data, attachments: newAttachments });
   };
 
   const sectionClass = "bg-white/60 p-5 rounded-xl border border-[#D1D1CA] shadow-sm";
@@ -72,9 +78,20 @@ export default function LetterForm({ data, onChange }: LetterFormProps) {
               <div className="mt-4 space-y-3 p-3 bg-[#EBEBE4]/50 rounded-lg border border-[#D1D1CA]">
                 <p className="text-[10px] font-bold text-[#5A5A40] uppercase border-b border-[#D1D1CA] pb-1">Pengaturan Gambar Kop</p>
                 
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[10px] font-bold text-[#4A4A4A] mb-1">Tinggi Gambar: {data.kopImageHeight}px</label>
+                    <input type="range" min="50" max="400" name="kopImageHeight" value={data.kopImageHeight} onChange={handleChange} className="w-full accent-[#5A5A40]" />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold text-[#4A4A4A] mb-1">Jarak Bawah Gambar: {data.kopImageMarginBottom}px</label>
+                    <input type="range" min="-50" max="200" name="kopImageMarginBottom" value={data.kopImageMarginBottom} onChange={handleChange} className="w-full accent-[#5A5A40]" />
+                  </div>
+                </div>
+
                 <div>
-                  <label className="block text-[10px] font-bold text-[#4A4A4A] mb-1">Tinggi Gambar: {data.kopImageHeight}px</label>
-                  <input type="range" min="50" max="400" name="kopImageHeight" value={data.kopImageHeight} onChange={handleChange} className="w-full accent-[#5A5A40]" />
+                  <label className="block text-[10px] font-bold text-[#4A4A4A] mb-1">Posisi Vertikal (Melewati Batas Margin Atas/Bawah): {data.kopImageOffsetY}px</label>
+                  <input type="range" min="-150" max="150" name="kopImageOffsetY" value={data.kopImageOffsetY} onChange={handleChange} className="w-full accent-[#5A5A40]" />
                 </div>
 
                 <div className="grid grid-cols-2 gap-2">
@@ -240,14 +257,26 @@ export default function LetterForm({ data, onChange }: LetterFormProps) {
               className="w-full text-sm text-[#4A4A4A] file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-[#5A5A40] file:text-white hover:file:bg-[#484833] transition-all cursor-pointer" 
             />
           </div>
-          {(data.attachmentImages && data.attachmentImages.length > 0) && (
-            <div className="grid grid-cols-2 gap-2 mt-4">
-              {data.attachmentImages.map((img, idx) => (
-                <div key={idx} className="relative border border-[#D1D1CA] p-1 rounded bg-[#EBEBE4]">
-                  <img src={img} alt={`Preview ${idx}`} className="w-full h-24 object-cover rounded" />
+          {(data.attachments && data.attachments.length > 0) && (
+            <div className="grid grid-cols-1 gap-3 mt-4">
+              {data.attachments.map((att, idx) => (
+                <div key={idx} className="relative border border-[#D1D1CA] p-3 rounded-lg bg-[#EBEBE4]">
+                  <img src={att.url} alt={`Preview ${idx}`} className="w-full h-32 object-contain bg-white rounded border border-[#D1D1CA] mb-3" />
+                  
+                  <div className="space-y-3">
+                    <div>
+                      <label className="block text-[10px] font-bold text-[#4A4A4A] mb-1">Lebar Gambar: {att.width}px</label>
+                      <input type="range" min="100" max="800" value={att.width} onChange={(e) => updateAttachmentDimension(idx, 'width', Number(e.target.value))} className="w-full accent-[#5A5A40]" />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold text-[#4A4A4A] mb-1">Tinggi Gambar: {att.height}px</label>
+                      <input type="range" min="100" max="1000" value={att.height} onChange={(e) => updateAttachmentDimension(idx, 'height', Number(e.target.value))} className="w-full accent-[#5A5A40]" />
+                    </div>
+                  </div>
+
                   <button 
                     onClick={() => removeAttachment(idx)}
-                    className="absolute top-2 right-2 bg-red-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold shadow-md hover:bg-red-700"
+                    className="absolute top-2 right-2 bg-red-600 text-white rounded-full w-7 h-7 flex items-center justify-center text-xs font-bold shadow-md hover:bg-red-700 transition-colors"
                   >
                     X
                   </button>
