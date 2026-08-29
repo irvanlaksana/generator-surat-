@@ -69,7 +69,7 @@ export default function LetterPreview({ data }: LetterPreviewProps) {
           </div>
 
           {/* Body */}
-          <div className="space-y-4 text-justify">
+          <div className="space-y-0 text-justify letter-content">
             <p>Yang bertanda tangan di bawah ini, mewakili Manajemen <strong>{data.kopCompanyName}</strong>:</p>
             
             <div className="pl-8 space-y-1 my-3">
@@ -147,7 +147,7 @@ export default function LetterPreview({ data }: LetterPreviewProps) {
             <p>Pelaksanaan Surat Tugas ini wajib tunduk dan patuh pada ketentuan sebagai berikut:</p>
 
             {/* Rules Sections */}
-            <div className="space-y-4">
+            <div className="space-y-0">
               <div className="text-center font-bold mt-6 mb-2">MASA BERLAKU SURAT TUGAS</div>
               <p>
                 Surat Tugas ini berlaku efektif terhitung sejak tanggal {data.validFrom} sampai dengan tanggal {data.validTo}. Apabila masa berlaku telah berakhir, Surat Tugas ini dinyatakan tidak berlaku lagi dan wajib diperpanjang melalui persetujuan Manajemen {data.kopCompanyName}.
