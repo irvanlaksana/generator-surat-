@@ -3,6 +3,7 @@ import LetterForm from './components/LetterForm';
 import LetterPreview from './components/LetterPreview';
 import { LetterData } from './types';
 import { FileText } from 'lucide-react';
+import { generateLetterNumber } from './utils/letterNumber';
 
 const initialData: LetterData = {
   kopImage: null,
@@ -12,7 +13,7 @@ const initialData: LetterData = {
   kopImageOffsetY: 0,
   kopImageMarginBottom: 32,
   kopCompanyName: 'PT. MITRA JASATRIA INDONESIA',
-  letterNumber: 'ST-DC/MJI/2026/08/0483',
+  letterNumber: generateLetterNumber(),
   assignerName: 'FILEMO HALAWA',
   assignerPosition: 'DIREKTUR',
   assigneeName: 'RIZKY JUANDA SAPUTRA',
