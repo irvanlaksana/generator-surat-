@@ -1,5 +1,6 @@
 import React from 'react';
 import { LetterData } from '../types';
+import { generateLetterNumber } from '../utils/letterNumber';
 
 interface LetterFormProps {
   data: LetterData;
@@ -11,6 +12,10 @@ export default function LetterForm({ data, onChange }: LetterFormProps) {
     const { name, value, type } = e.target;
     const parsedValue = (type === 'range' || type === 'number') ? Number(value) : value;
     onChange({ ...data, [name]: parsedValue });
+  };
+
+  const handleGenerateLetterNumber = () => {
+    onChange({ ...data, letterNumber: generateLetterNumber() });
   };
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -127,7 +132,16 @@ export default function LetterForm({ data, onChange }: LetterFormProps) {
         <div className="space-y-4">
           <div>
             <label className={labelClass}>Nomor Surat</label>
-            <input type="text" name="letterNumber" value={data.letterNumber} onChange={handleChange} className={inputClass} />
+            <div className="flex gap-2">
+              <input type="text" name="letterNumber" value={data.letterNumber} onChange={handleChange} className={inputClass} />
+              <button
+                type="button"
+                onClick={handleGenerateLetterNumber}
+                className="shrink-0 rounded-lg bg-[#5A5A40] px-3 py-2 text-xs font-bold text-white transition-colors hover:bg-[#484833]"
+              >
+                Acak
+              </button>
+            </div>
           </div>
           <div>
             <label className={labelClass}>Tempat & Tanggal (Tanda Tangan)</label>
