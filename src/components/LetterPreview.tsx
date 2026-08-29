@@ -1,21 +1,36 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { LetterData } from '../types';
 import { Printer } from 'lucide-react';
+import { useReactToPrint } from 'react-to-print';
 
 interface LetterPreviewProps {
   data: LetterData;
 }
 
 export default function LetterPreview({ data }: LetterPreviewProps) {
-  const handlePrint = () => {
-    window.print();
+  const contentRef = useRef<HTMLDivElement>(null);
+  
+  const handlePrint = useReactToPrint({
+    contentRef,
+    documentTitle: `Surat_Tugas_${data.customerName?.replace(/\s+/g, '_') || 'Penagihan'}`,
+  });
+
+  const triggerPrint = () => {
+    // If in iframe, window.print or react-to-print sometimes fails depending on permissions.
+    // react-to-print creates an iframe. We'll try react-to-print first.
+    // If it fails or is blocked by sandbox, warn the user.
+    try {
+      handlePrint();
+    } catch (err) {
+      alert("Browser memblokir fitur cetak di dalam preview ini. Harap buka aplikasi di Tab Baru (ikon panah di kanan atas) untuk mencetak.");
+    }
   };
 
   return (
     <div className="h-full flex flex-col bg-[#FDFBF7]">
       <div className="flex justify-end p-4 bg-[#EBEBE4] border-b border-[#D1D1CA] print:hidden">
         <button 
-          onClick={handlePrint}
+          onClick={triggerPrint}
           className="flex items-center gap-2 px-4 py-2 bg-[#5A5A40] text-white rounded-lg hover:bg-[#484833] transition-colors font-medium text-sm shadow-sm"
         >
           <Printer size={16} />
@@ -23,7 +38,7 @@ export default function LetterPreview({ data }: LetterPreviewProps) {
         </button>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4 md:p-8 print:p-0 print:overflow-visible text-black bg-[#EBEBE4] print:bg-white">
+      <div className="flex-1 overflow-y-auto p-4 md:p-8 print:p-0 print:overflow-visible text-black bg-[#EBEBE4] print:bg-white" ref={contentRef}>
         {/* The Document Container - F4 Size (210x330mm) with 1cm Top Margin, 3.5cm Bottom Margin */}
         <div className="max-w-[210mm] min-h-[330mm] mx-auto bg-white pt-[10mm] px-[20mm] pb-[35mm] shadow-[0_20px_50px_rgba(0,0,0,0.08)] border border-[#E5E5E0] font-serif print:shadow-none print:border-none print:p-0 print:pt-[10mm] print:px-[20mm] print:pb-[35mm] print:m-0 print:max-w-none print:min-h-[330mm] text-[15px] leading-snug">
           
