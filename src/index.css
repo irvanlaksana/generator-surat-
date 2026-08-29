@@ -1,5 +1,14 @@
 @import "tailwindcss";
 
+.letter-content {
+  line-height: 1;
+}
+
+.letter-content p,
+.letter-content li {
+  line-height: 1;
+}
+
 @media print {
   @page {
     size: 210mm 330mm;
