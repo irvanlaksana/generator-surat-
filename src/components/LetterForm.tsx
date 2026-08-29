@@ -31,7 +31,7 @@ export default function LetterForm({ data, onChange }: LetterFormProps) {
     let processed = 0;
     const newAttachments: { url: string, width: number, height: number }[] = [];
     
-    Array.from(files).forEach(file => {
+    Array.from(files).forEach((file: File) => {
       const reader = new FileReader();
       reader.onloadend = () => {
         newAttachments.push({ url: reader.result as string, width: 600, height: 400 });
