@@ -1,7 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { BastData, ChecklistMap, ItemCondition, VehicleType } from '../types';
 import { getChecklistDefinitions } from '../data/defaults';
-import { fetchFirebaseData, EmployeeDoc, DebtorDoc } from '../services/firebaseService';
 import { generateOfficialLetterNumber } from '../utils/letterNumber';
 import { 
   Bike, 
@@ -12,14 +11,9 @@ import {
   FileText, 
   CheckSquare, 
   Sparkles,
-  RotateCcw,
   CheckCircle2,
   AlertTriangle,
-  MinusCircle,
-  Users,
-  Search,
-  Filter,
-  ArrowRight
+  MinusCircle
 } from 'lucide-react';
 
 interface FormPanelProps {
@@ -33,32 +27,6 @@ export default function FormPanel({ data, set, setJenis, setChecklist }: FormPan
   const [activeSection, setActiveSection] = useState<'info' | 'kendaraan' | 'checklist' | 'ttd'>('info');
   const checklistDefs = getChecklistDefinitions(data.jenis);
 
-  // Firestore Data State
-  const [employees, setEmployees] = useState<EmployeeDoc[]>([]);
-  const [debtors, setDebtors] = useState<DebtorDoc[]>([]);
-  const [multifinances, setMultifinances] = useState<string[]>([]);
-  
-  // Pickers Modal State
-  const [showEmployeePicker, setShowEmployeePicker] = useState(false);
-  const [showDebtorPicker, setShowDebtorPicker] = useState(false);
-  const [searchEmployeeQuery, setSearchEmployeeQuery] = useState('');
-  const [searchDebtorQuery, setSearchDebtorQuery] = useState('');
-  const [selectedMultifinance, setSelectedMultifinance] = useState('all');
-
-  useEffect(() => {
-    const loadFirestore = async () => {
-      try {
-        const res = await fetchFirebaseData();
-        setEmployees(res.employees);
-        setDebtors(res.debtors);
-        setMultifinances(res.multifinances);
-      } catch (err) {
-        console.error('Error loading Firestore data in FormPanel:', err);
-      }
-    };
-    loadFirestore();
-  }, []);
-
   const inputClass =
     'w-full bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs text-slate-800 focus:outline-none focus:ring-1 focus:ring-[#5A5A40] focus:border-[#5A5A40] transition-all shadow-2xs';
   const labelClass = 'block text-[10px] uppercase tracking-wider font-bold text-slate-500 mb-0.5';
@@ -66,37 +34,6 @@ export default function FormPanel({ data, set, setJenis, setChecklist }: FormPan
   const updateField = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     set(name as keyof BastData, value);
-  };
-
-  const selectEmployee = (emp: EmployeeDoc) => {
-    set('petugasNama', emp.nama);
-    set('petugasNik', emp.nik);
-    set('petugasJabatan', emp.jabatan);
-    if (emp.hp) set('petugasHp', emp.hp);
-    setShowEmployeePicker(false);
-  };
-
-  const selectDebtor = (deb: DebtorDoc) => {
-    set('krediturLeasing', deb.multifinance);
-    set('nomorKontrak', deb.nomorKontrak);
-    set('debiturNama', deb.namaNasabah);
-    if (deb.nik) set('debiturNik', deb.nik);
-    set('debiturAlamat', deb.alamat);
-    if (deb.hp) set('debiturHp', deb.hp);
-    set('kendaraanMerk', deb.kendaraanMerk);
-    set('kendaraanType', deb.kendaraanType);
-    set('kendaraanNoPol', deb.kendaraanNoPol);
-    if (deb.kendaraanNoRangka) set('kendaraanNoRangka', deb.kendaraanNoRangka);
-    if (deb.kendaraanNoMesin) set('kendaraanNoMesin', deb.kendaraanNoMesin);
-    if (deb.kendaraanTahun) set('kendaraanTahun', deb.kendaraanTahun);
-    if (deb.kendaraanWarna) set('kendaraanWarna', deb.kendaraanWarna);
-    if (deb.kendaraanOdometer) set('kendaraanOdometer', deb.kendaraanOdometer);
-    if (deb.kendaraanStnk) set('kendaraanStnk', deb.kendaraanStnk);
-    if (deb.kendaraanBpkb) set('kendaraanBpkb', deb.kendaraanBpkb);
-    if (deb.kendaraanBahanBakar) set('kendaraanBahanBakar', deb.kendaraanBahanBakar);
-    if (deb.jenisKendaraan) setJenis(deb.jenisKendaraan);
-
-    setShowDebtorPicker(false);
   };
 
   const handleItemStatusChange = (id: string, status: ItemCondition) => {
@@ -142,22 +79,6 @@ export default function FormPanel({ data, set, setJenis, setChecklist }: FormPan
     }
     setChecklist(updated);
   };
-
-  const filteredEmployees = employees.filter((e) => {
-    const q = searchEmployeeQuery.toLowerCase();
-    return e.nama.toLowerCase().includes(q) || e.nik.toLowerCase().includes(q) || e.jabatan.toLowerCase().includes(q);
-  });
-
-  const filteredDebtors = debtors.filter((d) => {
-    const q = searchDebtorQuery.toLowerCase();
-    const matchesQuery =
-      d.namaNasabah.toLowerCase().includes(q) ||
-      d.nomorKontrak.toLowerCase().includes(q) ||
-      d.kendaraanNoPol.toLowerCase().includes(q) ||
-      d.alamat.toLowerCase().includes(q);
-    const matchesMf = selectedMultifinance === 'all' || d.multifinance === selectedMultifinance;
-    return matchesQuery && matchesMf;
-  });
 
   const handleGenerateBast = () => {
     const num = generateOfficialLetterNumber({
@@ -376,19 +297,9 @@ export default function FormPanel({ data, set, setJenis, setChecklist }: FormPan
 
           {/* Petugas */}
           <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-xs space-y-3">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-2">
-              <div className="flex items-center gap-2">
-                <UserCheck size={15} className="text-[#5A5A40]" />
-                <h3 className="text-xs font-bold text-slate-800">Pihak Kedua (Petugas Penerima)</h3>
-              </div>
-              <button
-                type="button"
-                onClick={() => setShowEmployeePicker(true)}
-                className="flex items-center gap-1 px-2.5 py-1 bg-[#2D6A4F] hover:bg-[#1B4332] text-white rounded-lg text-xs font-bold transition cursor-pointer"
-              >
-                <Users size={12} />
-                <span>Tarik Karyawan</span>
-              </button>
+            <div className="flex items-center gap-2 border-b border-slate-100 pb-2">
+              <UserCheck size={15} className="text-[#5A5A40]" />
+              <h3 className="text-xs font-bold text-slate-800">Pihak Kedua (Petugas Penerima)</h3>
             </div>
             <div className="grid grid-cols-2 gap-2">
               <div>
@@ -414,19 +325,9 @@ export default function FormPanel({ data, set, setJenis, setChecklist }: FormPan
 
           {/* Debitur */}
           <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-xs space-y-3">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-2">
-              <div className="flex items-center gap-2">
-                <User size={15} className="text-[#5A5A40]" />
-                <h3 className="text-xs font-bold text-slate-800">Pihak Pertama (Debitur / Penyerah)</h3>
-              </div>
-              <button
-                type="button"
-                onClick={() => setShowDebtorPicker(true)}
-                className="flex items-center gap-1 px-2.5 py-1 bg-[#5A5A40] hover:bg-[#484833] text-white rounded-lg text-xs font-bold transition cursor-pointer"
-              >
-                <Building2 size={12} />
-                <span>Tarik Debitur</span>
-              </button>
+            <div className="flex items-center gap-2 border-b border-slate-100 pb-2">
+              <User size={15} className="text-[#5A5A40]" />
+              <h3 className="text-xs font-bold text-slate-800">Pihak Pertama (Debitur / Penyerah)</h3>
             </div>
             <div className="grid grid-cols-2 gap-2">
               <div>
@@ -669,205 +570,6 @@ export default function FormPanel({ data, set, setJenis, setChecklist }: FormPan
               rows={3}
               className={`${inputClass} resize-none`}
             />
-          </div>
-        </div>
-      )}
-
-      {/* ========================================================================= */}
-      {/* MODAL: TARIK DATA KARYAWAN */}
-      {/* ========================================================================= */}
-      {showEmployeePicker && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs">
-          <div className="bg-white w-full max-w-2xl rounded-2xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[80vh] animate-in fade-in zoom-in-95">
-            <div className="px-5 py-4 border-b border-slate-200 bg-slate-50 flex items-center justify-between">
-              <div className="flex items-center gap-2.5">
-                <div className="p-2 bg-[#2D6A4F] text-white rounded-xl">
-                  <Users size={18} />
-                </div>
-                <div>
-                  <h3 className="text-sm font-bold text-slate-900">Pilih Data Karyawan / Petugas</h3>
-                  <p className="text-xs text-slate-500">Tarik data ke petugas penerima BAST</p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setShowEmployeePicker(false)}
-                className="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg hover:bg-slate-200/50"
-              >
-                ✕
-              </button>
-            </div>
-
-            <div className="p-3.5 border-b border-slate-100 bg-white">
-              <div className="relative">
-                <Search className="absolute left-3.5 top-2.5 text-slate-400" size={16} />
-                <input
-                  type="text"
-                  placeholder="Cari nama karyawan, NIK, atau jabatan..."
-                  value={searchEmployeeQuery}
-                  onChange={(e) => setSearchEmployeeQuery(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-[#2D6A4F] focus:bg-white transition"
-                  autoFocus
-                />
-              </div>
-            </div>
-
-            <div className="p-4 overflow-y-auto flex-1 space-y-2 custom-scrollbar bg-slate-50/50">
-              {filteredEmployees.length === 0 ? (
-                <div className="text-center py-8 text-slate-500 text-xs">
-                  Tidak ditemukan karyawan yang sesuai pencarian.
-                </div>
-              ) : (
-                filteredEmployees.map((emp) => (
-                  <div
-                    key={emp.id}
-                    onClick={() => selectEmployee(emp)}
-                    className="p-3 bg-white rounded-xl border border-slate-200 hover:border-[#2D6A4F] hover:shadow-sm transition cursor-pointer flex items-center justify-between gap-3"
-                  >
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-bold text-slate-900 uppercase">{emp.nama}</span>
-                        <span className="text-[10px] px-2 py-0.5 rounded bg-emerald-50 text-emerald-800 border border-emerald-200 font-semibold">
-                          {emp.jabatan}
-                        </span>
-                      </div>
-                      <p className="text-[11px] text-slate-600 mt-1">
-                        NIK: <strong className="font-mono">{emp.nik}</strong> {emp.cabang && `| Cabang: ${emp.cabang}`} {emp.hp && `| HP: ${emp.hp}`}
-                      </p>
-                    </div>
-                    <button
-                      type="button"
-                      className="px-3 py-1.5 bg-[#2D6A4F] text-white text-xs font-bold rounded-lg hover:bg-[#1B4332]"
-                    >
-                      Pilih
-                    </button>
-                  </div>
-                ))
-              )}
-            </div>
-
-            <div className="px-5 py-3 border-t border-slate-200 bg-slate-50 flex justify-end">
-              <button
-                type="button"
-                onClick={() => setShowEmployeePicker(false)}
-                className="px-4 py-1.5 text-xs font-semibold text-slate-600 bg-white border border-slate-300 rounded-lg hover:bg-slate-100"
-              >
-                Batal
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ========================================================================= */}
-      {/* MODAL: TARIK DATA DEBITUR DARI SEMUA MULTIFINANCE */}
-      {/* ========================================================================= */}
-      {showDebtorPicker && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs">
-          <div className="bg-white w-full max-w-3xl rounded-2xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[85vh] animate-in fade-in zoom-in-95">
-            <div className="px-5 py-4 border-b border-slate-200 bg-slate-50 flex items-center justify-between">
-              <div className="flex items-center gap-2.5">
-                <div className="p-2 bg-[#5A5A40] text-white rounded-xl">
-                  <Building2 size={18} />
-                </div>
-                <div>
-                  <h3 className="text-sm font-bold text-slate-900">Pilih Data Debitur (Semua Multifinance)</h3>
-                  <p className="text-xs text-slate-500">Tarik data nasabah, kontrak, dan spesifikasi unit ke formulir BAST</p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setShowDebtorPicker(false)}
-                className="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg hover:bg-slate-200/50"
-              >
-                ✕
-              </button>
-            </div>
-
-            <div className="px-4 py-2.5 bg-slate-100/70 border-b border-slate-200 flex flex-wrap items-center justify-between gap-2">
-              <div className="flex items-center gap-1.5">
-                <Filter size={13} className="text-slate-500" />
-                <span className="text-xs font-semibold text-slate-700">Filter Multifinance:</span>
-                <select
-                  value={selectedMultifinance}
-                  onChange={(e) => setSelectedMultifinance(e.target.value)}
-                  className="bg-white border border-slate-300 rounded-lg px-2.5 py-1 text-xs font-semibold text-slate-800"
-                >
-                  <option value="all">Semua Multifinance ({debtors.length})</option>
-                  {multifinances.map((mf) => (
-                    <option key={mf} value={mf}>{mf}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            <div className="p-3.5 border-b border-slate-100 bg-white">
-              <div className="relative">
-                <Search className="absolute left-3.5 top-2.5 text-slate-400" size={16} />
-                <input
-                  type="text"
-                  placeholder="Cari nama nasabah, nomor kontrak, plat nomor, atau alamat..."
-                  value={searchDebtorQuery}
-                  onChange={(e) => setSearchDebtorQuery(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-[#5A5A40] focus:bg-white transition"
-                  autoFocus
-                />
-              </div>
-            </div>
-
-            <div className="p-4 overflow-y-auto flex-1 space-y-2.5 custom-scrollbar bg-slate-50/50">
-              {filteredDebtors.length === 0 ? (
-                <div className="text-center py-8 text-slate-500 text-xs">
-                  Tidak ditemukan debitur yang cocok dengan filter atau kata kunci.
-                </div>
-              ) : (
-                filteredDebtors.map((deb) => (
-                  <div
-                    key={deb.id}
-                    onClick={() => selectDebtor(deb)}
-                    className="p-3.5 bg-white rounded-xl border border-slate-200 hover:border-[#5A5A40] hover:shadow-sm transition cursor-pointer flex flex-col sm:flex-row sm:items-center justify-between gap-3"
-                  >
-                    <div className="space-y-1">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className="text-xs font-bold text-slate-900 uppercase">{deb.namaNasabah}</span>
-                        <span className="text-[10px] px-2 py-0.5 rounded bg-emerald-50 text-emerald-800 border border-emerald-200 font-semibold">
-                          {deb.multifinance}
-                        </span>
-                        <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-100 text-slate-700">
-                          {deb.nomorKontrak}
-                        </span>
-                      </div>
-                      <div className="text-[11px] text-slate-700 flex flex-wrap items-center gap-x-3 gap-y-0.5">
-                        <span className="font-semibold">
-                          🚗 {deb.kendaraanMerk} {deb.kendaraanType} ({deb.kendaraanNoPol})
-                        </span>
-                        <span className="text-slate-500">📍 {deb.alamat}</span>
-                      </div>
-                      <div className="text-[10.5px] text-slate-600 flex flex-wrap items-center gap-x-3">
-                        <span>Rangka: {deb.kendaraanNoRangka || '-'}</span>
-                        <span>Mesin: {deb.kendaraanNoMesin || '-'}</span>
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      className="px-3.5 py-1.5 bg-[#5A5A40] text-white text-xs font-bold rounded-lg hover:bg-[#484833] shrink-0"
-                    >
-                      Pilih ke BAST
-                    </button>
-                  </div>
-                ))
-              )}
-            </div>
-
-            <div className="px-5 py-3 border-t border-slate-200 bg-slate-50 flex justify-end">
-              <button
-                type="button"
-                onClick={() => setShowDebtorPicker(false)}
-                className="px-4 py-1.5 text-xs font-semibold text-slate-600 bg-white border border-slate-300 rounded-lg hover:bg-slate-100"
-              >
-                Batal
-              </button>
-            </div>
           </div>
         </div>
       )}

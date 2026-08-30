@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import LetterForm from './components/LetterForm';
 import LetterPreview from './components/LetterPreview';
 import BastGenerator from './components/BastGenerator';
-import FirebaseSyncBar from './components/FirebaseSyncBar';
 import GoogleDriveSaveModal from './components/GoogleDriveSaveModal';
 import { LetterData, BastData } from './types';
 import { FileText, ClipboardCheck, UploadCloud } from 'lucide-react';
@@ -155,15 +154,6 @@ export default function App() {
           </button>
         </div>
       </header>
-
-      {/* Firebase Firestore Realtime Sync Bar */}
-      <div className="shrink-0">
-        <FirebaseSyncBar
-          onApplyToLetter={handleApplyToLetter}
-          onApplyToBast={handleApplyToBast}
-          currentDocType={docType}
-        />
-      </div>
 
       {/* Main Content Area */}
       {docType === 'bast' ? (

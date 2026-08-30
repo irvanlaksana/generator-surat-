@@ -2,25 +2,26 @@ import React, { useState, useEffect } from 'react';
 import { 
   FolderPlus, 
   Folder, 
+  FolderOpen,
   UploadCloud, 
   ExternalLink, 
   Loader2, 
   CheckCircle2, 
   AlertCircle, 
   ChevronRight, 
-  Building, 
-  User, 
   FileText,
   Search,
-  Plus
+  Plus,
+  RefreshCw,
+  ArrowLeft,
+  Check
 } from 'lucide-react';
 import { 
-  MULTI_FINANCE_ROOT_FOLDER_ID,
   listSubfolders,
   findOrCreateFolder,
   uploadPdfToDrive,
   DriveFolder,
-  getAccessToken
+  SKP_ROOT_FOLDER_ID
 } from '../services/googleDriveService';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
@@ -43,26 +44,25 @@ export default function GoogleDriveSaveModal({
   suggestedContractNo = '',
 }: GoogleDriveSaveModalProps) {
   // Navigation State
-  const [step, setStep] = useState<'select_finance' | 'select_debtor' | 'confirm_upload'>('select_finance');
+  const [step, setStep] = useState<'select_folder' | 'confirm_upload'>('select_folder');
   const [loading, setLoading] = useState(false);
   const [statusMsg, setStatusMsg] = useState<string>('');
   const [errorMsg, setErrorMsg] = useState<string>('');
   const [successLink, setSuccessLink] = useState<string | null>(null);
 
-  // Multi Finance Folders
-  const [financeFolders, setFinanceFolders] = useState<DriveFolder[]>([]);
-  const [selectedFinance, setSelectedFinance] = useState<DriveFolder | null>(null);
-  const [customFinanceName, setCustomFinanceName] = useState(suggestedClientName || '');
+  // Folder Navigation Hierarchy
+  const [folderPath, setFolderPath] = useState<DriveFolder[]>([
+    { id: SKP_ROOT_FOLDER_ID, name: 'SKP' }
+  ]);
+  const currentFolder = folderPath[folderPath.length - 1] || { id: SKP_ROOT_FOLDER_ID, name: 'SKP' };
 
-  // Debtor Folders
-  const [debtorFolders, setDebtorFolders] = useState<DriveFolder[]>([]);
-  const [selectedDebtor, setSelectedDebtor] = useState<DriveFolder | null>(null);
-  const [customDebtorName, setCustomDebtorName] = useState(suggestedDebtorName || '');
-  const [isCreatingDebtorFolder, setIsCreatingDebtorFolder] = useState(false);
+  // Subfolders of current active directory
+  const [subFolders, setSubFolders] = useState<DriveFolder[]>([]);
+  const [selectedFolder, setSelectedFolder] = useState<DriveFolder | null>(null);
+  const [customFolderName, setCustomFolderName] = useState(suggestedDebtorName || '');
 
-  // Search filter
-  const [searchFinance, setSearchFinance] = useState('');
-  const [searchDebtor, setSearchDebtor] = useState('');
+  // Search filter inside current folder
+  const [searchFolder, setSearchFolder] = useState('');
 
   // Filename preview
   const defaultFileName = `${
@@ -75,33 +75,22 @@ export default function GoogleDriveSaveModal({
       setSuccessLink(null);
       setErrorMsg('');
       setFileName(defaultFileName);
-      setCustomFinanceName(suggestedClientName || '');
-      setCustomDebtorName(suggestedDebtorName || '');
-      loadMultiFinanceFolders();
+      setCustomFolderName(suggestedDebtorName || '');
+      const rootItem: DriveFolder = { id: SKP_ROOT_FOLDER_ID, name: 'SKP' };
+      setFolderPath([rootItem]);
+      loadFolderContents(rootItem);
     }
   }, [isOpen, suggestedClientName, suggestedDebtorName, suggestedContractNo, currentDocType]);
 
-  // Load root folders inside Multi Finance directory (1y6uAMRHxV3CWu5mdYFnz95-zIMZhU9zk)
-  const loadMultiFinanceFolders = async () => {
+  // Load subfolders for given folder
+  const loadFolderContents = async (folder: DriveFolder) => {
     setLoading(true);
     setErrorMsg('');
-    setStatusMsg('Memuat daftar Multi Finance dari Google Drive...');
+    setStatusMsg(`Membuka folder "${folder.name}"...`);
     try {
-      const folders = await listSubfolders(MULTI_FINANCE_ROOT_FOLDER_ID);
-      setFinanceFolders(folders);
-
-      // Auto-match if suggestedClientName exists
-      if (suggestedClientName && folders.length > 0) {
-        const found = folders.find(
-          (f) =>
-            f.name.toLowerCase().includes(suggestedClientName.toLowerCase()) ||
-            suggestedClientName.toLowerCase().includes(f.name.toLowerCase())
-        );
-        if (found) {
-          setSelectedFinance(found);
-        }
-      }
-      setStep('select_finance');
+      const folders = await listSubfolders(folder.id);
+      setSubFolders(folders);
+      setStep('select_folder');
     } catch (err: any) {
       console.error(err);
       setErrorMsg(err.message || 'Gagal memuat folder Google Drive. Pastikan izin akses telah disetujui.');
@@ -111,80 +100,67 @@ export default function GoogleDriveSaveModal({
     }
   };
 
-  // Load debtor folders inside chosen Finance folder
-  const loadDebtorFolders = async (finance: DriveFolder) => {
-    setSelectedFinance(finance);
-    setLoading(true);
-    setErrorMsg('');
-    setStatusMsg(`Memuat daftar folder debitur di ${finance.name}...`);
-    try {
-      const folders = await listSubfolders(finance.id);
-      setDebtorFolders(folders);
-
-      // Check if suggested debtor matches
-      if (suggestedDebtorName && folders.length > 0) {
-        const found = folders.find(
-          (f) =>
-            f.name.toLowerCase().includes(suggestedDebtorName.toLowerCase()) ||
-            suggestedDebtorName.toLowerCase().includes(f.name.toLowerCase())
-        );
-        if (found) {
-          setSelectedDebtor(found);
-        }
-      }
-      setStep('select_debtor');
-    } catch (err: any) {
-      console.error(err);
-      setErrorMsg(err.message || 'Gagal membuka folder multi finance.');
-    } finally {
-      setLoading(false);
-      setStatusMsg('');
-    }
+  // Open / Enter a subfolder
+  const handleOpenSubfolder = (folder: DriveFolder) => {
+    const nextPath = [...folderPath, folder];
+    setFolderPath(nextPath);
+    setSearchFolder('');
+    loadFolderContents(folder);
   };
 
-  // Handle create new Debtor folder
-  const handleCreateDebtorFolder = async () => {
-    if (!selectedFinance) return;
-    const nameToCreate = customDebtorName.trim() || suggestedDebtorName.trim() || 'Debitur Baru';
+  // Navigate up one level
+  const handleNavigateUp = () => {
+    if (folderPath.length <= 1) return;
+    const nextPath = folderPath.slice(0, folderPath.length - 1);
+    setFolderPath(nextPath);
+    setSearchFolder('');
+    loadFolderContents(nextPath[nextPath.length - 1]);
+  };
+
+  // Navigate directly via breadcrumb click
+  const handleBreadcrumbClick = (index: number) => {
+    if (index === folderPath.length - 1) return;
+    const nextPath = folderPath.slice(0, index + 1);
+    setFolderPath(nextPath);
+    setSearchFolder('');
+    loadFolderContents(nextPath[nextPath.length - 1]);
+  };
+
+  // Select folder as target upload destination
+  const handleSelectFolderAsTarget = (folder: DriveFolder) => {
+    setSelectedFolder(folder);
+    setStep('confirm_upload');
+  };
+
+  // Create new folder inside the CURRENT folder
+  const handleCreateFolder = async (autoOpen: boolean = false) => {
+    const nameToCreate = customFolderName.trim() || suggestedDebtorName.trim() || 'Folder Baru';
     
     setLoading(true);
     setErrorMsg('');
-    setStatusMsg(`Membuat folder "${nameToCreate}" di Google Drive...`);
+    setStatusMsg(`Membuat folder "${nameToCreate}" di dalam ${currentFolder.name}...`);
     try {
-      const newFolder = await findOrCreateFolder(selectedFinance.id, nameToCreate);
-      setSelectedDebtor(newFolder);
-      // add to list if not present
-      if (!debtorFolders.some((f) => f.id === newFolder.id)) {
-        setDebtorFolders([newFolder, ...debtorFolders]);
+      const newFolder = await findOrCreateFolder(currentFolder.id, nameToCreate);
+      
+      // Update subfolders list
+      if (!subFolders.some((f) => f.id === newFolder.id)) {
+        setSubFolders([newFolder, ...subFolders]);
       }
-      setIsCreatingDebtorFolder(false);
-      setStep('confirm_upload');
+      setCustomFolderName('');
+
+      if (autoOpen) {
+        // Open the newly created folder
+        handleOpenSubfolder(newFolder);
+      } else {
+        // Select it directly as target
+        handleSelectFolderAsTarget(newFolder);
+      }
     } catch (err: any) {
       console.error(err);
-      setErrorMsg(err.message || 'Gagal membuat folder debitur.');
+      setErrorMsg(err.message || 'Gagal membuat folder baru.');
     } finally {
       setLoading(false);
       setStatusMsg('');
-    }
-  };
-
-  // Handle create new Multi Finance folder if needed
-  const handleCreateFinanceFolder = async () => {
-    const nameToCreate = customFinanceName.trim() || suggestedClientName.trim() || 'Multi Finance Baru';
-    setLoading(true);
-    setErrorMsg('');
-    setStatusMsg(`Membuat folder finance "${nameToCreate}" di Google Drive...`);
-    try {
-      const newFolder = await findOrCreateFolder(MULTI_FINANCE_ROOT_FOLDER_ID, nameToCreate);
-      setSelectedFinance(newFolder);
-      if (!financeFolders.some((f) => f.id === newFolder.id)) {
-        setFinanceFolders([newFolder, ...financeFolders]);
-      }
-      await loadDebtorFolders(newFolder);
-    } catch (err: any) {
-      console.error(err);
-      setErrorMsg(err.message || 'Gagal membuat folder Multi Finance.');
-      setLoading(false);
     }
   };
 
@@ -198,7 +174,6 @@ export default function GoogleDriveSaveModal({
     });
 
     if (currentDocType === 'surat_tugas') {
-      // Element surat tugas
       const el = document.getElementById('letter-preview-doc');
       if (!el) throw new Error('Dokumen Surat Tugas tidak ditemukan di halaman');
 
@@ -212,7 +187,6 @@ export default function GoogleDriveSaveModal({
       const imgData = canvas.toDataURL('image/jpeg', 0.95);
       pdf.addImage(imgData, 'JPEG', 0, 0, 210, 297, undefined, 'FAST');
     } else {
-      // Element BAST & Penyerahan
       const pages = ['surat-penyerahan-doc', 'bast-sheet-doc'];
       let added = 0;
       for (const pageId of pages) {
@@ -239,8 +213,8 @@ export default function GoogleDriveSaveModal({
 
   // Execute Upload
   const handleUpload = async () => {
-    if (!selectedDebtor) {
-      setErrorMsg('Silakan pilih atau buat folder debitur terlebih dahulu.');
+    if (!selectedFolder) {
+      setErrorMsg('Silakan pilih atau buat folder terlebih dahulu.');
       return;
     }
 
@@ -250,11 +224,11 @@ export default function GoogleDriveSaveModal({
     try {
       const blob = await generatePdfBlob();
       const finalName = fileName.endsWith('.pdf') ? fileName : `${fileName}.pdf`;
-      const uploaded = await uploadPdfToDrive(selectedDebtor.id, finalName, blob);
+      const uploaded = await uploadPdfToDrive(selectedFolder.id, finalName, blob);
 
       setSuccessLink(
         uploaded.webViewLink ||
-          `https://drive.google.com/drive/folders/${selectedDebtor.id}`
+          `https://drive.google.com/drive/folders/${selectedFolder.id}`
       );
       setStatusMsg('File berhasil disimpan ke Google Drive!');
     } catch (err: any) {
@@ -278,10 +252,10 @@ export default function GoogleDriveSaveModal({
             </div>
             <div>
               <h3 className="text-sm font-bold text-slate-900">
-                Simpan Dokumen ke Google Drive
+                Penyimpanan Dokumen ke Google Drive
               </h3>
               <p className="text-xs text-slate-500">
-                Folder Multi Finance & Folder Debitur
+                Jelajahi, pilih folder, atau buat folder baru
               </p>
             </div>
           </div>
@@ -294,44 +268,28 @@ export default function GoogleDriveSaveModal({
           </button>
         </div>
 
-        {/* Breadcrumb Steps */}
+        {/* Step Indicator */}
         <div className="px-5 py-2.5 bg-slate-100/70 border-b border-slate-200 flex items-center gap-2 text-xs">
           <button
             type="button"
-            onClick={() => setStep('select_finance')}
-            className={`font-semibold flex items-center gap-1 ${
-              step === 'select_finance'
+            onClick={() => setStep('select_folder')}
+            className={`font-semibold flex items-center gap-1.5 ${
+              step === 'select_folder'
                 ? 'text-[#5A5A40]'
                 : 'text-slate-500 hover:text-slate-800'
             }`}
           >
-            <Building size={13} />
-            {selectedFinance ? selectedFinance.name : 'Pilih Multi Finance'}
-          </button>
-          <ChevronRight size={12} className="text-slate-400" />
-          <button
-            type="button"
-            onClick={() => selectedFinance && setStep('select_debtor')}
-            disabled={!selectedFinance}
-            className={`font-semibold flex items-center gap-1 ${
-              step === 'select_debtor'
-                ? 'text-[#5A5A40]'
-                : selectedFinance
-                ? 'text-slate-500 hover:text-slate-800'
-                : 'text-slate-300'
-            }`}
-          >
-            <User size={13} />
-            {selectedDebtor ? selectedDebtor.name : 'Pilih Debitur'}
+            <FolderOpen size={14} />
+            1. Jelajahi & Pilih / Buat Folder
           </button>
           <ChevronRight size={12} className="text-slate-400" />
           <span
-            className={`font-semibold flex items-center gap-1 ${
-              step === 'confirm_upload' ? 'text-[#5A5A40]' : 'text-slate-300'
+            className={`font-semibold flex items-center gap-1.5 ${
+              step === 'confirm_upload' ? 'text-[#5A5A40]' : 'text-slate-400'
             }`}
           >
-            <FileText size={13} />
-            Simpan PDF
+            <FileText size={14} />
+            2. Konfirmasi & Simpan
           </span>
         </div>
 
@@ -350,7 +308,7 @@ export default function GoogleDriveSaveModal({
 
           {/* Success State */}
           {successLink && (
-            <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl text-center space-y-3">
+            <div className="p-5 bg-emerald-50 border border-emerald-200 rounded-xl text-center space-y-3">
               <div className="w-12 h-12 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto">
                 <CheckCircle2 size={28} />
               </div>
@@ -359,7 +317,7 @@ export default function GoogleDriveSaveModal({
                   Dokumen Berhasil Disimpan!
                 </h4>
                 <p className="text-xs text-emerald-700 mt-1">
-                  File telah diunggah ke folder debitur <strong>{selectedDebtor?.name}</strong> di bawah <strong>{selectedFinance?.name}</strong>.
+                  File telah diunggah ke folder <strong>{selectedFolder?.name}</strong> di Google Drive.
                 </p>
               </div>
               <div className="flex items-center justify-center gap-2 pt-2">
@@ -375,7 +333,7 @@ export default function GoogleDriveSaveModal({
                 <button
                   type="button"
                   onClick={onClose}
-                  className="px-4 py-2 bg-white text-slate-700 border border-slate-300 rounded-lg text-xs font-semibold hover:bg-slate-50 transition"
+                  className="px-4 py-2 bg-white text-slate-700 border border-slate-300 rounded-lg text-xs font-semibold hover:bg-slate-50 transition cursor-pointer"
                 >
                   Selesai
                 </button>
@@ -383,289 +341,320 @@ export default function GoogleDriveSaveModal({
             </div>
           )}
 
-          {/* STEP 1: SELECT OR CREATE MULTI FINANCE FOLDER */}
-          {!successLink && step === 'select_finance' && (
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <label className="text-xs font-bold text-slate-800">
-                  1. Pilih Folder Multi Finance / Leasing:
-                </label>
-                <a
-                  href={`https://drive.google.com/drive/folders/${MULTI_FINANCE_ROOT_FOLDER_ID}`}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="text-[11px] text-[#5A5A40] hover:underline flex items-center gap-1"
-                >
-                  Buka Folder Induk <ExternalLink size={11} />
-                </a>
-              </div>
-
-              {/* Search Finance */}
-              <div className="relative">
-                <Search className="absolute left-3 top-2.5 text-slate-400" size={15} />
-                <input
-                  type="text"
-                  placeholder="Cari nama Multi Finance (cth: OTO, BAF, WOM, ACC, dll)..."
-                  value={searchFinance}
-                  onChange={(e) => setSearchFinance(e.target.value)}
-                  className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#5A5A40]"
-                />
-              </div>
-
-              {/* List Multi Finance */}
-              <div className="border border-slate-200 rounded-xl overflow-hidden max-h-56 overflow-y-auto divide-y divide-slate-100 bg-white">
-                {financeFolders
-                  .filter((f) => f.name.toLowerCase().includes(searchFinance.toLowerCase()))
-                  .map((folder) => {
-                    const isSelected = selectedFinance?.id === folder.id;
-                    return (
-                      <div
-                        key={folder.id}
-                        onClick={() => loadDebtorFolders(folder)}
-                        className={`p-3 flex items-center justify-between hover:bg-slate-50 cursor-pointer transition ${
-                          isSelected ? 'bg-[#5A5A40]/10 font-bold text-[#5A5A40]' : 'text-slate-700'
-                        }`}
+          {/* STEP 1: FOLDER EXPLORER (OPEN, SELECT, CREATE) */}
+          {!successLink && step === 'select_folder' && (
+            <div className="space-y-3.5">
+              {/* Breadcrumbs & Navigation Bar */}
+              <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-200 space-y-2">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-1.5 overflow-x-auto text-xs py-0.5 text-slate-700 font-medium">
+                    {folderPath.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={handleNavigateUp}
+                        disabled={loading}
+                        className="p-1 hover:bg-slate-200 rounded text-slate-600 hover:text-slate-900 transition flex items-center gap-1 text-[11px] font-semibold mr-1 cursor-pointer"
+                        title="Kembali ke folder sebelumnya"
                       >
-                        <div className="flex items-center gap-2.5">
-                          <Folder size={16} className={isSelected ? 'text-[#5A5A40]' : 'text-amber-500'} />
-                          <span className="text-xs">{folder.name}</span>
-                        </div>
-                        <button
-                          type="button"
-                          className="text-[11px] font-semibold text-[#5A5A40] hover:underline flex items-center gap-0.5"
-                        >
-                          Pilih <ChevronRight size={13} />
-                        </button>
-                      </div>
-                    );
-                  })}
+                        <ArrowLeft size={13} />
+                        <span>Kembali</span>
+                      </button>
+                    )}
 
-                {financeFolders.length === 0 && !loading && (
-                  <div className="p-4 text-center text-xs text-slate-400">
-                    Belum ada folder di Google Drive induk.
+                    {folderPath.map((item, idx) => {
+                      const isLast = idx === folderPath.length - 1;
+                      return (
+                        <React.Fragment key={item.id}>
+                          {idx > 0 && <ChevronRight size={12} className="text-slate-400 shrink-0" />}
+                          <button
+                            type="button"
+                            onClick={() => handleBreadcrumbClick(idx)}
+                            disabled={isLast || loading}
+                            className={`px-1.5 py-0.5 rounded transition shrink-0 flex items-center gap-1 ${
+                              isLast
+                                ? 'bg-white font-bold text-[#5A5A40] shadow-2xs border border-slate-200'
+                                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/70 cursor-pointer'
+                            }`}
+                          >
+                            <Folder size={12} className={isLast ? 'text-[#5A5A40]' : 'text-amber-500'} />
+                            <span>{item.name}</span>
+                          </button>
+                        </React.Fragment>
+                      );
+                    })}
                   </div>
-                )}
-              </div>
 
-              {/* Add New Finance Folder */}
-              <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
-                <span className="text-[11px] font-bold text-slate-700 block">
-                  Tidak menemukan Multi Finance yang dicari?
-                </span>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    placeholder="Nama Multi Finance baru..."
-                    value={customFinanceName}
-                    onChange={(e) => setCustomFinanceName(e.target.value)}
-                    className="flex-1 px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs"
-                  />
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => loadFolderContents(currentFolder)}
+                      disabled={loading}
+                      className="text-[11px] text-slate-600 hover:text-slate-900 bg-white hover:bg-slate-100 border border-slate-200 px-2 py-1 rounded-lg flex items-center gap-1 transition cursor-pointer"
+                      title="Segarkan daftar isi folder"
+                    >
+                      <RefreshCw size={11} className={loading ? 'animate-spin' : ''} />
+                      <span className="hidden sm:inline">Muat Ulang</span>
+                    </button>
+                    <a
+                      href={`https://drive.google.com/drive/folders/${currentFolder.id}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-[11px] text-[#5A5A40] hover:text-[#484833] bg-[#5A5A40]/10 hover:bg-[#5A5A40]/20 px-2 py-1 rounded-lg flex items-center gap-1 transition"
+                      title="Buka langsung di tab Google Drive"
+                    >
+                      <ExternalLink size={11} />
+                      <span className="hidden sm:inline">Drive</span>
+                    </a>
+                  </div>
+                </div>
+
+                {/* Banner to select CURRENT FOLDER directly */}
+                <div className="pt-1.5 border-t border-slate-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-amber-50/50 p-2 rounded-lg border-dashed border-amber-200">
+                  <div className="text-[11px] text-slate-700">
+                    <span className="text-slate-500">Folder Aktif Saat Ini:</span>{' '}
+                    <strong className="text-slate-900 font-bold">{currentFolder.name}</strong>
+                  </div>
                   <button
                     type="button"
-                    onClick={handleCreateFinanceFolder}
-                    disabled={!customFinanceName.trim() || loading}
-                    className="px-3 py-1.5 bg-[#5A5A40] text-white rounded-lg text-xs font-bold hover:bg-[#484833] disabled:opacity-50 flex items-center gap-1 cursor-pointer"
+                    onClick={() => handleSelectFolderAsTarget(currentFolder)}
+                    className="px-3 py-1.5 bg-[#5A5A40] text-white hover:bg-[#484833] rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 shadow-2xs cursor-pointer shrink-0"
                   >
-                    <Plus size={14} /> Buat Folder
+                    <Check size={13} />
+                    Pilih "{currentFolder.name}" Sebagai Tujuan
                   </button>
                 </div>
               </div>
-            </div>
-          )}
 
-          {/* STEP 2: SELECT OR CREATE DEBTOR FOLDER */}
-          {!successLink && step === 'select_debtor' && selectedFinance && (
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <label className="text-xs font-bold text-slate-800">
-                    2. Folder Debitur / Nasabah di <span className="text-[#5A5A40]">{selectedFinance.name}</span>:
-                  </label>
-                  <p className="text-[11px] text-slate-500">
-                    Pilih folder yang sudah ada atau buat folder baru untuk debitur ini.
-                  </p>
-                </div>
-                <a
-                  href={`https://drive.google.com/drive/folders/${selectedFinance.id}`}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="text-[11px] text-[#5A5A40] hover:underline flex items-center gap-1 shrink-0"
-                >
-                  Buka Folder <ExternalLink size={11} />
-                </a>
-              </div>
-
-              {/* Search Debtor */}
+              {/* Search Bar */}
               <div className="relative">
                 <Search className="absolute left-3 top-2.5 text-slate-400" size={15} />
                 <input
                   type="text"
-                  placeholder="Cari nama debitur di folder ini..."
-                  value={searchDebtor}
-                  onChange={(e) => setSearchDebtor(e.target.value)}
-                  className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#5A5A40]"
+                  placeholder={`Cari sub-folder di dalam "${currentFolder.name}"...`}
+                  value={searchFolder}
+                  onChange={(e) => setSearchFolder(e.target.value)}
+                  className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#5A5A40]"
                 />
               </div>
 
-              {/* List Debtor Folders */}
-              <div className="border border-slate-200 rounded-xl overflow-hidden max-h-56 overflow-y-auto divide-y divide-slate-100 bg-white">
-                {debtorFolders
-                  .filter((f) => f.name.toLowerCase().includes(searchDebtor.toLowerCase()))
-                  .map((folder) => {
-                    const isSelected = selectedDebtor?.id === folder.id;
-                    return (
-                      <div
-                        key={folder.id}
-                        onClick={() => {
-                          setSelectedDebtor(folder);
-                          setStep('confirm_upload');
-                        }}
-                        className={`p-3 flex items-center justify-between hover:bg-slate-50 cursor-pointer transition ${
-                          isSelected ? 'bg-[#5A5A40]/10 font-bold text-[#5A5A40]' : 'text-slate-700'
-                        }`}
-                      >
-                        <div className="flex items-center gap-2.5">
-                          <Folder size={16} className={isSelected ? 'text-[#5A5A40]' : 'text-amber-500'} />
-                          <span className="text-xs">{folder.name}</span>
-                        </div>
-                        <button
-                          type="button"
-                          className="text-[11px] font-semibold text-[#5A5A40] hover:underline flex items-center gap-0.5"
-                        >
-                          Pilih Folder <ChevronRight size={13} />
-                        </button>
-                      </div>
-                    );
-                  })}
+              {/* Subfolders Explorer List */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between text-[11px] text-slate-500 font-semibold px-1">
+                  <span>Daftar Sub-Folder di "{currentFolder.name}":</span>
+                  <span>{subFolders.length} folder ditemukan</span>
+                </div>
 
-                {debtorFolders.length === 0 && !loading && (
-                  <div className="p-6 text-center text-xs text-slate-500 space-y-1">
-                    <p className="font-semibold text-slate-700">Belum ada folder debitur di {selectedFinance.name}.</p>
-                    <p className="text-[11px] text-slate-400">
-                      Gunakan tombol <strong>"Tambah Folder Debitur"</strong> di bawah untuk membuat folder baru secara instan.
-                    </p>
-                  </div>
-                )}
+                <div className="border border-slate-200 rounded-xl overflow-hidden max-h-52 overflow-y-auto divide-y divide-slate-100 bg-white shadow-2xs">
+                  {subFolders
+                    .filter((f) => f.name.toLowerCase().includes(searchFolder.toLowerCase()))
+                    .map((folder) => {
+                      return (
+                        <div
+                          key={folder.id}
+                          className="p-2.5 sm:p-3 flex items-center justify-between hover:bg-slate-50 transition gap-2 group"
+                        >
+                          <div
+                            onClick={() => handleOpenSubfolder(folder)}
+                            className="flex items-center gap-2.5 flex-1 min-w-0 cursor-pointer"
+                            title="Klik untuk membuka sub-folder ini"
+                          >
+                            <div className="p-1.5 rounded-lg bg-amber-50 text-amber-600 group-hover:bg-amber-100 transition shrink-0">
+                              <Folder size={16} />
+                            </div>
+                            <div className="min-w-0">
+                              <p className="text-xs font-semibold text-slate-800 truncate group-hover:text-[#5A5A40] transition">
+                                {folder.name}
+                              </p>
+                              <span className="text-[10px] text-slate-400 flex items-center gap-0.5">
+                                Klik untuk buka sub-folder
+                              </span>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            <button
+                              type="button"
+                              onClick={() => handleOpenSubfolder(folder)}
+                              className="px-2 py-1 text-[11px] font-medium text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 rounded-md transition flex items-center gap-1 cursor-pointer"
+                              title="Buka isi folder ini"
+                            >
+                              <FolderOpen size={12} />
+                              Buka
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleSelectFolderAsTarget(folder)}
+                              className="px-2.5 py-1 text-[11px] font-bold text-[#5A5A40] bg-[#5A5A40]/10 hover:bg-[#5A5A40] hover:text-white rounded-md transition flex items-center gap-1 cursor-pointer"
+                              title="Pilih folder ini sebagai tujuan simpan PDF"
+                            >
+                              <Check size={12} />
+                              Pilih
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+
+                  {subFolders.length === 0 && !loading && (
+                    <div className="p-6 text-center text-xs text-slate-500 space-y-1.5">
+                      <p className="font-semibold text-slate-700">Folder "{currentFolder.name}" masih kosong.</p>
+                      <p className="text-[11px] text-slate-400">
+                        Anda dapat memilih folder ini langsung atau membuat sub-folder baru di bawah.
+                      </p>
+                    </div>
+                  )}
+                </div>
               </div>
 
-              {/* CREATE DEBTOR FOLDER BUTTON / BOX */}
+              {/* CREATE FOLDER SECTION */}
               <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl space-y-2.5">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
                     <FolderPlus size={15} className="text-[#5A5A40]" />
-                    Tambah Folder Debitur Baru:
+                    Buat Folder Baru di dalam "{currentFolder.name}":
                   </span>
                 </div>
 
                 <div className="flex flex-col sm:flex-row gap-2">
                   <input
                     type="text"
-                    placeholder="Nama Debitur (cth: AHMAD FAUZI - 123456)..."
-                    value={customDebtorName}
-                    onChange={(e) => setCustomDebtorName(e.target.value)}
-                    className="flex-1 px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs text-slate-800"
+                    placeholder={`Nama folder baru di dalam "${currentFolder.name}"...`}
+                    value={customFolderName}
+                    onChange={(e) => setCustomFolderName(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && customFolderName.trim()) {
+                        handleCreateFolder(false);
+                      }
+                    }}
+                    className="flex-1 px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#5A5A40]"
                   />
-                  <button
-                    type="button"
-                    onClick={handleCreateDebtorFolder}
-                    disabled={!customDebtorName.trim() || loading}
-                    className="px-4 py-2 bg-[#5A5A40] text-white rounded-lg text-xs font-bold hover:bg-[#484833] disabled:opacity-50 flex items-center justify-center gap-1.5 cursor-pointer shadow-xs"
-                  >
-                    <Plus size={14} /> Buat & Pilih Folder
-                  </button>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => handleCreateFolder(false)}
+                      disabled={!customFolderName.trim() || loading}
+                      className="flex-1 sm:flex-initial px-3 py-2 bg-[#5A5A40] text-white rounded-lg text-xs font-bold hover:bg-[#484833] disabled:opacity-50 flex items-center justify-center gap-1 cursor-pointer transition shadow-2xs"
+                      title="Buat folder dan langsung gunakan sebagai tujuan simpan"
+                    >
+                      <Plus size={14} /> Buat & Pilih
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleCreateFolder(true)}
+                      disabled={!customFolderName.trim() || loading}
+                      className="px-3 py-2 bg-white text-slate-700 border border-slate-300 rounded-lg text-xs font-semibold hover:bg-slate-100 disabled:opacity-50 flex items-center justify-center gap-1 cursor-pointer transition"
+                      title="Buat folder dan buka isinya"
+                    >
+                      <FolderOpen size={13} /> Buat & Buka
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
           )}
 
-          {/* STEP 3: CONFIRM & UPLOAD */}
-          {!successLink && step === 'confirm_upload' && selectedFinance && selectedDebtor && (
+          {/* STEP 2: CONFIRM & UPLOAD */}
+          {!successLink && step === 'confirm_upload' && selectedFolder && (
             <div className="space-y-4">
-              <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl space-y-2 text-xs">
-                <div className="flex justify-between border-b border-slate-200 pb-1.5">
-                  <span className="text-slate-500">Multi Finance:</span>
-                  <span className="font-bold text-slate-800">{selectedFinance.name}</span>
+              <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-2.5 text-xs">
+                <div className="flex justify-between items-start border-b border-slate-200 pb-2">
+                  <span className="text-slate-500 shrink-0">Lokasi / Jalur Folder:</span>
+                  <div className="flex items-center gap-1 flex-wrap justify-end text-slate-700 font-medium text-[11px]">
+                    {folderPath.map((item, idx) => (
+                      <React.Fragment key={item.id}>
+                        {idx > 0 && <span className="text-slate-400">/</span>}
+                        <span>{item.name}</span>
+                      </React.Fragment>
+                    ))}
+                    {selectedFolder.id !== currentFolder.id && (
+                      <>
+                        <span className="text-slate-400">/</span>
+                        <span className="font-bold text-[#5A5A40]">{selectedFolder.name}</span>
+                      </>
+                    )}
+                  </div>
                 </div>
-                <div className="flex justify-between border-b border-slate-200 pb-1.5">
-                  <span className="text-slate-500">Folder Debitur:</span>
-                  <span className="font-bold text-slate-800">{selectedDebtor.name}</span>
+
+                <div className="flex justify-between items-center border-b border-slate-200 pb-2">
+                  <span className="text-slate-500">Folder Tujuan Terpilih:</span>
+                  <span className="font-bold text-emerald-800 bg-emerald-50 px-2.5 py-1 rounded-md border border-emerald-200 flex items-center gap-1.5">
+                    <Folder size={13} className="text-emerald-600" />
+                    {selectedFolder.name}
+                  </span>
                 </div>
-                <div className="flex justify-between">
+
+                <div className="flex justify-between items-center">
                   <span className="text-slate-500">Tipe Dokumen:</span>
-                  <span className="font-semibold text-[#5A5A40]">
-                    {currentDocType === 'surat_tugas' ? 'Surat Tugas Penagihan' : 'BAST & Surat Penyerahan'}
+                  <span className="font-semibold text-slate-800">
+                    {currentDocType === 'surat_tugas'
+                      ? 'Surat Tugas Eksekusi Jaminan Fidusia'
+                      : 'BAST & Berita Acara Penyerahan Kendaraan'}
                   </span>
                 </div>
               </div>
 
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
-                  Nama File PDF:
+              {/* Edit Filename */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-800 flex items-center justify-between">
+                  <span>Nama File PDF:</span>
+                  <span className="text-[11px] text-slate-400 font-normal">Dapat disesuaikan</span>
                 </label>
                 <input
                   type="text"
                   value={fileName}
                   onChange={(e) => setFileName(e.target.value)}
-                  className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs text-slate-800 font-mono focus:outline-none focus:ring-2 focus:ring-[#5A5A40]"
+                  className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#5A5A40] font-mono"
                 />
               </div>
 
               <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-800">
-                💡 File PDF beresolusi tinggi akan dibuat dari formulir aktif dan langsung diunggah ke Google Drive Anda secara otomatis.
+                💡 Dokumen PDF berkualitas tinggi akan dibuat dari formulir aktif dan langsung diunggah ke Google Drive Anda secara otomatis.
               </div>
             </div>
           )}
         </div>
 
-        {/* Footer */}
-        <div className="px-5 py-3.5 border-t border-slate-200 bg-slate-50 flex items-center justify-between">
+        {/* Footer Buttons */}
+        <div className="px-5 py-3.5 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
           <div className="text-xs text-slate-500 flex items-center gap-2">
             {loading && (
               <>
                 <Loader2 size={15} className="animate-spin text-[#5A5A40]" />
-                <span>{statusMsg || 'Memproses Google Drive...'}</span>
+                <span className="font-medium">{statusMsg || 'Memproses...'}</span>
               </>
             )}
           </div>
 
           <div className="flex items-center gap-2">
-            {step === 'select_debtor' && !successLink && (
-              <button
-                type="button"
-                onClick={() => setStep('select_finance')}
-                className="px-3.5 py-1.5 text-xs font-medium text-slate-600 hover:text-slate-900 bg-white border border-slate-300 rounded-lg hover:bg-slate-100 transition cursor-pointer"
-              >
-                Kembali
-              </button>
-            )}
-
             {step === 'confirm_upload' && !successLink && (
               <button
                 type="button"
-                onClick={() => setStep('select_debtor')}
+                onClick={() => setStep('select_folder')}
                 className="px-3.5 py-1.5 text-xs font-medium text-slate-600 hover:text-slate-900 bg-white border border-slate-300 rounded-lg hover:bg-slate-100 transition cursor-pointer"
               >
                 Ganti Folder
               </button>
             )}
 
-            {!successLink && step === 'confirm_upload' ? (
+            {!successLink && step === 'confirm_upload' && (
               <button
                 type="button"
                 onClick={handleUpload}
-                disabled={loading}
-                className="px-5 py-2 bg-[#5A5A40] hover:bg-[#484833] text-white text-xs font-bold rounded-lg transition shadow-sm flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                disabled={loading || !selectedFolder}
+                className="px-5 py-2 bg-[#5A5A40] text-white hover:bg-[#484833] rounded-lg text-xs font-bold transition flex items-center gap-1.5 shadow-sm disabled:opacity-50 cursor-pointer"
               >
                 {loading ? <Loader2 size={14} className="animate-spin" /> : <UploadCloud size={14} />}
                 Unggah & Simpan ke Drive
               </button>
-            ) : (
+            )}
+
+            {!successLink && step === 'select_folder' && (
               <button
                 type="button"
                 onClick={onClose}
-                className="px-4 py-1.5 text-xs font-semibold text-slate-600 hover:text-slate-800 bg-white border border-slate-300 rounded-lg hover:bg-slate-100 transition cursor-pointer"
+                className="px-4 py-1.5 text-xs font-medium text-slate-600 hover:text-slate-900 bg-white border border-slate-300 rounded-lg hover:bg-slate-100 transition cursor-pointer"
               >
-                {successLink ? 'Tutup' : 'Batal'}
+                Batal
               </button>
             )}
           </div>

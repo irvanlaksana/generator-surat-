@@ -1,8 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { LetterData } from '../types';
-import { generateLetterNumber, generateOfficialLetterNumber } from '../utils/letterNumber';
-import { fetchFirebaseData, EmployeeDoc, DebtorDoc } from '../services/firebaseService';
-import { Users, Building2, Search, Check, ChevronDown, Sparkles, Filter, Bike, Car } from 'lucide-react';
+import { generateOfficialLetterNumber } from '../utils/letterNumber';
+import { Sparkles } from 'lucide-react';
 
 interface LetterFormProps {
   data: LetterData;
@@ -10,36 +9,6 @@ interface LetterFormProps {
 }
 
 export default function LetterForm({ data, onChange }: LetterFormProps) {
-  const [employees, setEmployees] = useState<EmployeeDoc[]>([]);
-  const [debtors, setDebtors] = useState<DebtorDoc[]>([]);
-  const [multifinances, setMultifinances] = useState<string[]>([]);
-  const [loadingData, setLoadingData] = useState(false);
-
-  // Modals / Dropdowns state
-  const [showEmployeePicker, setShowEmployeePicker] = useState(false);
-  const [showDebtorPicker, setShowDebtorPicker] = useState(false);
-  const [searchEmployeeQuery, setSearchEmployeeQuery] = useState('');
-  const [searchDebtorQuery, setSearchDebtorQuery] = useState('');
-  const [selectedMultifinance, setSelectedMultifinance] = useState('all');
-
-  // Load Firestore collections on mount
-  useEffect(() => {
-    const loadFirestore = async () => {
-      setLoadingData(true);
-      try {
-        const res = await fetchFirebaseData();
-        setEmployees(res.employees);
-        setDebtors(res.debtors);
-        setMultifinances(res.multifinances);
-      } catch (err) {
-        console.error('Error loading Firestore data in form:', err);
-      } finally {
-        setLoadingData(false);
-      }
-    };
-    loadFirestore();
-  }, []);
-
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
     const parsedValue = (type === 'range' || type === 'number') ? Number(value) : value;
@@ -54,35 +23,6 @@ export default function LetterForm({ data, onChange }: LetterFormProps) {
         companyName: data.kopCompanyName,
       }),
     });
-  };
-
-  // Pilih Petugas / Karyawan
-  const selectEmployee = (emp: EmployeeDoc) => {
-    onChange({
-      ...data,
-      assigneeName: emp.nama,
-      assigneeNIK: emp.nik,
-      assigneePosition: emp.jabatan,
-    });
-    setShowEmployeePicker(false);
-  };
-
-  // Pilih Debitur / Nasabah dari Multifinance
-  const selectDebtor = (deb: DebtorDoc) => {
-    onChange({
-      ...data,
-      clientName: deb.multifinance,
-      customerContract: deb.nomorKontrak,
-      customerName: deb.namaNasabah,
-      customerAddress: deb.alamat,
-      customerDueDate: deb.jatuhTempo,
-      customerPenalty: deb.denda,
-      customerInstallment: deb.angsuran,
-      customerUnpaidInstallmentCount: deb.unpaidCount || '10 Bulan',
-      vehicleBrand: deb.kendaraanType ? `${deb.kendaraanMerk} / ${deb.kendaraanType}` : deb.kendaraanMerk,
-      vehiclePlate: deb.kendaraanNoPol,
-    });
-    setShowDebtorPicker(false);
   };
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -134,23 +74,6 @@ export default function LetterForm({ data, onChange }: LetterFormProps) {
   const headingClass = "text-xs font-bold text-slate-800 pb-1.5 border-b border-slate-100 uppercase tracking-wider flex items-center justify-between";
   const labelClass = "block text-[10px] uppercase tracking-wider font-bold text-slate-500 mb-0.5";
   const inputClass = "w-full px-2.5 py-1.5 border border-slate-300 bg-white rounded-lg focus:ring-1 focus:ring-[#5A5A40] focus:border-[#5A5A40] outline-none transition-all text-slate-800 placeholder:text-slate-400 text-xs shadow-2xs";
-
-  // Filtered lists for modals
-  const filteredEmployees = employees.filter((e) => {
-    const q = searchEmployeeQuery.toLowerCase();
-    return e.nama.toLowerCase().includes(q) || e.nik.toLowerCase().includes(q) || e.jabatan.toLowerCase().includes(q);
-  });
-
-  const filteredDebtors = debtors.filter((d) => {
-    const q = searchDebtorQuery.toLowerCase();
-    const matchesQuery =
-      d.namaNasabah.toLowerCase().includes(q) ||
-      d.nomorKontrak.toLowerCase().includes(q) ||
-      d.kendaraanNoPol.toLowerCase().includes(q) ||
-      d.alamat.toLowerCase().includes(q);
-    const matchesMf = selectedMultifinance === 'all' || d.multifinance === selectedMultifinance;
-    return matchesQuery && matchesMf;
-  });
 
   return (
     <div className="space-y-2.5 pb-4">
@@ -274,17 +197,9 @@ export default function LetterForm({ data, onChange }: LetterFormProps) {
           </section>
 
           <section className={sectionClass}>
-            <div className={headingClass}>
+            <h2 className={headingClass}>
               <span>Penerima Tugas</span>
-              <button
-                type="button"
-                onClick={() => setShowEmployeePicker(true)}
-                className="flex items-center gap-1 px-2 py-0.5 bg-[#2D6A4F] hover:bg-[#1B4332] text-white rounded-md text-[10.5px] font-bold transition shadow-2xs cursor-pointer"
-              >
-                <Users size={11} />
-                <span>Tarik Karyawan</span>
-              </button>
-            </div>
+            </h2>
 
             <div className="space-y-2">
               <div>
@@ -310,17 +225,9 @@ export default function LetterForm({ data, onChange }: LetterFormProps) {
       {(activeCategory === 'semua' || activeCategory === 'nasabah') && (
         <>
           <section className={sectionClass}>
-            <div className={headingClass}>
+            <h2 className={headingClass}>
               <span>Klien / Multifinance</span>
-              <button
-                type="button"
-                onClick={() => setShowDebtorPicker(true)}
-                className="flex items-center gap-1 px-2 py-0.5 bg-[#5A5A40] hover:bg-[#484833] text-white rounded-md text-[10.5px] font-bold transition shadow-2xs cursor-pointer"
-              >
-                <Building2 size={11} />
-                <span>Tarik Data</span>
-              </button>
-            </div>
+            </h2>
 
             <div className="space-y-2">
               <div>
@@ -342,17 +249,9 @@ export default function LetterForm({ data, onChange }: LetterFormProps) {
 
           {/* 4. DATA NASABAH */}
           <section className={sectionClass}>
-            <div className={headingClass}>
+            <h2 className={headingClass}>
               <span>Data Nasabah / Debitur</span>
-              <button
-                type="button"
-                onClick={() => setShowDebtorPicker(true)}
-                className="flex items-center gap-1 px-2 py-0.5 bg-[#5A5A40] hover:bg-[#484833] text-white rounded-md text-[10.5px] font-bold transition shadow-2xs cursor-pointer"
-              >
-                <Building2 size={11} />
-                <span>Pilih Debitur</span>
-              </button>
-            </div>
+            </h2>
 
             <div className="space-y-2">
               <div className="grid grid-cols-2 gap-2">
@@ -431,7 +330,7 @@ export default function LetterForm({ data, onChange }: LetterFormProps) {
                       <button
                         type="button"
                         onClick={() => onChange({ ...data, kopImage: null })}
-                        className="text-[10px] text-rose-600 font-bold hover:underline"
+                        className="text-[10px] text-rose-600 font-bold hover:underline cursor-pointer"
                       >
                         Hapus Kop
                       </button>
@@ -510,7 +409,7 @@ export default function LetterForm({ data, onChange }: LetterFormProps) {
 
                     <button 
                       onClick={() => removeAttachment(idx)}
-                      className="absolute top-1.5 right-1.5 bg-rose-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-[10px] font-bold shadow hover:bg-rose-700 transition"
+                      className="absolute top-1.5 right-1.5 bg-rose-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-[10px] font-bold shadow hover:bg-rose-700 transition cursor-pointer"
                       title="Hapus foto"
                     >
                       ✕
@@ -521,206 +420,6 @@ export default function LetterForm({ data, onChange }: LetterFormProps) {
             )}
           </div>
         </section>
-      )}
-
-      {/* ========================================================================= */}
-      {/* MODAL: TARIK DATA KARYAWAN */}
-      {/* ========================================================================= */}
-      {showEmployeePicker && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs">
-          <div className="bg-white w-full max-w-2xl rounded-2xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[80vh] animate-in fade-in zoom-in-95">
-            <div className="px-5 py-4 border-b border-slate-200 bg-slate-50 flex items-center justify-between">
-              <div className="flex items-center gap-2.5">
-                <div className="p-2 bg-[#2D6A4F] text-white rounded-xl">
-                  <Users size={18} />
-                </div>
-                <div>
-                  <h3 className="text-sm font-bold text-slate-900">Pilih Data Karyawan / Petugas</h3>
-                  <p className="text-xs text-slate-500">Tarik data untuk mengisi nama, NIK, dan jabatan penerima tugas</p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setShowEmployeePicker(false)}
-                className="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg hover:bg-slate-200/50"
-              >
-                ✕
-              </button>
-            </div>
-
-            <div className="p-3.5 border-b border-slate-100 bg-white">
-              <div className="relative">
-                <Search className="absolute left-3.5 top-2.5 text-slate-400" size={16} />
-                <input
-                  type="text"
-                  placeholder="Cari nama karyawan, NIK, atau jabatan..."
-                  value={searchEmployeeQuery}
-                  onChange={(e) => setSearchEmployeeQuery(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-[#2D6A4F] focus:bg-white transition"
-                  autoFocus
-                />
-              </div>
-            </div>
-
-            <div className="p-4 overflow-y-auto flex-1 space-y-2 custom-scrollbar bg-slate-50/50">
-              {filteredEmployees.length === 0 ? (
-                <div className="text-center py-8 text-slate-500 text-xs">
-                  Tidak ditemukan karyawan yang sesuai pencarian.
-                </div>
-              ) : (
-                filteredEmployees.map((emp) => (
-                  <div
-                    key={emp.id}
-                    onClick={() => selectEmployee(emp)}
-                    className="p-3 bg-white rounded-xl border border-slate-200 hover:border-[#2D6A4F] hover:shadow-sm transition cursor-pointer flex items-center justify-between gap-3"
-                  >
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-bold text-slate-900 uppercase">{emp.nama}</span>
-                        <span className="text-[10px] px-2 py-0.5 rounded bg-emerald-50 text-emerald-800 border border-emerald-200 font-semibold">
-                          {emp.jabatan}
-                        </span>
-                      </div>
-                      <p className="text-[11px] text-slate-600 mt-1">
-                        NIK: <strong className="font-mono">{emp.nik}</strong> {emp.cabang && `| Cabang: ${emp.cabang}`} {emp.hp && `| HP: ${emp.hp}`}
-                      </p>
-                    </div>
-                    <button
-                      type="button"
-                      className="px-3 py-1.5 bg-[#2D6A4F] text-white text-xs font-bold rounded-lg hover:bg-[#1B4332]"
-                    >
-                      Pilih
-                    </button>
-                  </div>
-                ))
-              )}
-            </div>
-
-            <div className="px-5 py-3 border-t border-slate-200 bg-slate-50 flex justify-end">
-              <button
-                type="button"
-                onClick={() => setShowEmployeePicker(false)}
-                className="px-4 py-1.5 text-xs font-semibold text-slate-600 bg-white border border-slate-300 rounded-lg hover:bg-slate-100"
-              >
-                Batal
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ========================================================================= */}
-      {/* MODAL: TARIK DATA DEBITUR DARI SEMUA MULTIFINANCE */}
-      {/* ========================================================================= */}
-      {showDebtorPicker && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs">
-          <div className="bg-white w-full max-w-3xl rounded-2xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[85vh] animate-in fade-in zoom-in-95">
-            <div className="px-5 py-4 border-b border-slate-200 bg-slate-50 flex items-center justify-between">
-              <div className="flex items-center gap-2.5">
-                <div className="p-2 bg-[#5A5A40] text-white rounded-xl">
-                  <Building2 size={18} />
-                </div>
-                <div>
-                  <h3 className="text-sm font-bold text-slate-900">Pilih Data Debitur (Semua Multifinance)</h3>
-                  <p className="text-xs text-slate-500">Tarik data nasabah, kontrak, denda, dan kendaraan otomatis</p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setShowDebtorPicker(false)}
-                className="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg hover:bg-slate-200/50"
-              >
-                ✕
-              </button>
-            </div>
-
-            <div className="px-4 py-2.5 bg-slate-100/70 border-b border-slate-200 flex flex-wrap items-center justify-between gap-2">
-              <div className="flex items-center gap-1.5">
-                <Filter size={13} className="text-slate-500" />
-                <span className="text-xs font-semibold text-slate-700">Filter Multifinance:</span>
-                <select
-                  value={selectedMultifinance}
-                  onChange={(e) => setSelectedMultifinance(e.target.value)}
-                  className="bg-white border border-slate-300 rounded-lg px-2.5 py-1 text-xs font-semibold text-slate-800"
-                >
-                  <option value="all">Semua Multifinance ({debtors.length})</option>
-                  {multifinances.map((mf) => (
-                    <option key={mf} value={mf}>{mf}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            <div className="p-3.5 border-b border-slate-100 bg-white">
-              <div className="relative">
-                <Search className="absolute left-3.5 top-2.5 text-slate-400" size={16} />
-                <input
-                  type="text"
-                  placeholder="Cari nama nasabah, nomor kontrak, plat nomor, atau alamat..."
-                  value={searchDebtorQuery}
-                  onChange={(e) => setSearchDebtorQuery(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-[#5A5A40] focus:bg-white transition"
-                  autoFocus
-                />
-              </div>
-            </div>
-
-            <div className="p-4 overflow-y-auto flex-1 space-y-2.5 custom-scrollbar bg-slate-50/50">
-              {filteredDebtors.length === 0 ? (
-                <div className="text-center py-8 text-slate-500 text-xs">
-                  Tidak ditemukan debitur yang cocok dengan filter atau kata kunci.
-                </div>
-              ) : (
-                filteredDebtors.map((deb) => (
-                  <div
-                    key={deb.id}
-                    onClick={() => selectDebtor(deb)}
-                    className="p-3.5 bg-white rounded-xl border border-slate-200 hover:border-[#5A5A40] hover:shadow-sm transition cursor-pointer flex flex-col sm:flex-row sm:items-center justify-between gap-3"
-                  >
-                    <div className="space-y-1">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className="text-xs font-bold text-slate-900 uppercase">{deb.namaNasabah}</span>
-                        <span className="text-[10px] px-2 py-0.5 rounded bg-emerald-50 text-emerald-800 border border-emerald-200 font-semibold">
-                          {deb.multifinance}
-                        </span>
-                        <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-100 text-slate-700">
-                          {deb.nomorKontrak}
-                        </span>
-                      </div>
-                      <div className="text-[11px] text-slate-700 flex flex-wrap items-center gap-x-3 gap-y-0.5">
-                        <span className="font-semibold">
-                          🚗 {deb.kendaraanMerk} {deb.kendaraanType} ({deb.kendaraanNoPol})
-                        </span>
-                        <span className="text-slate-500">📍 {deb.alamat}</span>
-                      </div>
-                      <div className="text-[10.5px] text-slate-600 flex flex-wrap items-center gap-x-3">
-                        <span className="text-rose-600 font-semibold">Denda: {deb.denda}</span>
-                        <span>Angsuran: {deb.angsuran}</span>
-                        <span>Jatuh Tempo: {deb.jatuhTempo}</span>
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      className="px-3.5 py-1.5 bg-[#5A5A40] text-white text-xs font-bold rounded-lg hover:bg-[#484833] shrink-0"
-                    >
-                      Pilih Nasabah
-                    </button>
-                  </div>
-                ))
-              )}
-            </div>
-
-            <div className="px-5 py-3 border-t border-slate-200 bg-slate-50 flex justify-end">
-              <button
-                type="button"
-                onClick={() => setShowDebtorPicker(false)}
-                className="px-4 py-1.5 text-xs font-semibold text-slate-600 bg-white border border-slate-300 rounded-lg hover:bg-slate-100"
-              >
-                Batal
-              </button>
-            </div>
-          </div>
-        </div>
       )}
     </div>
   );

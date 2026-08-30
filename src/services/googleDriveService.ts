@@ -2,19 +2,22 @@
 // Multi-finance parent folder: 1y6uAMRHxV3CWu5mdYFnz95-zIMZhU9zk
 // Sample debtor folder reference: 1-Ym58PdL7h9AV_EwXwBUljPNBVsRo9fA
 
-export const MULTI_FINANCE_ROOT_FOLDER_ID = '1y6uAMRHxV3CWu5mdYFnz95-zIMZhU9zk';
+export const SKP_ROOT_FOLDER_ID = '1BxPvATwEy_0dw8lKROK-PLZVu8Bkp2AS';
+export const MULTI_FINANCE_ROOT_FOLDER_ID = SKP_ROOT_FOLDER_ID;
 
-const CLIENT_ID = '532859225998-e3l3u0e0h7o5s7g61m8v5845qksmfs34.apps.googleusercontent.com'; // Injected by platform or env
+import firebaseConfig from '../../firebase-applet-config.json';
+const CLIENT_ID = firebaseConfig.oAuthClientId; // Provided by AI Studio OAuth setup
 const SCOPES = 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/drive.readonly';
 
 let tokenClient: any = null;
 let currentAccessToken: string | null = null;
 let tokenExpiresAt: number = 0;
+let pendingTokenPromise: Promise<string> | null = null;
 
 export interface DriveFolder {
   id: string;
   name: string;
-  mimeType: string;
+  mimeType?: string;
   webViewLink?: string;
 }
 
@@ -35,7 +38,7 @@ export async function initGoogleAuth(): Promise<void> {
     const checkGis = () => {
       if ((window as any).google?.accounts?.oauth2) {
         tokenClient = (window as any).google.accounts.oauth2.initTokenClient({
-          client_id: (window as any).__GOOGLE_CLIENT_ID__ || '532859225998-0000000000000.apps.googleusercontent.com',
+          client_id: (window as any).__GOOGLE_CLIENT_ID__ || CLIENT_ID,
           scope: SCOPES,
           callback: () => {}, // overridden in getAccessToken
         });
@@ -67,7 +70,11 @@ export async function getAccessToken(): Promise<string> {
     return cached;
   }
 
-  return new Promise((resolve, reject) => {
+  if (pendingTokenPromise) {
+    return pendingTokenPromise;
+  }
+
+  pendingTokenPromise = new Promise<string>((resolve, reject) => {
     try {
       if (!(window as any).google?.accounts?.oauth2) {
         throw new Error('Google Identity Services belum dimuat. Silakan refresh halaman.');
@@ -75,13 +82,13 @@ export async function getAccessToken(): Promise<string> {
 
       // Check if client ID is dynamically provided by AI Studio environment
       const clientId =
-        (window as any).__GOOGLE_CLIENT_ID__ ||
-        '532859225998.apps.googleusercontent.com';
+        (window as any).__GOOGLE_CLIENT_ID__ || CLIENT_ID;
 
       tokenClient = (window as any).google.accounts.oauth2.initTokenClient({
         client_id: clientId,
         scope: SCOPES,
         callback: (resp: any) => {
+          pendingTokenPromise = null;
           if (resp.error) {
             return reject(new Error(resp.error_description || resp.error));
           }
@@ -95,9 +102,41 @@ export async function getAccessToken(): Promise<string> {
 
       tokenClient.requestAccessToken({ prompt: '' });
     } catch (e) {
+      pendingTokenPromise = null;
       reject(e);
     }
   });
+
+  return pendingTokenPromise;
+}
+
+export async function getFolderMetadata(folderId: string): Promise<DriveFolder> {
+  try {
+    const token = await getAccessToken();
+    const url = `https://www.googleapis.com/drive/v3/files/${folderId}?fields=id,name,mimeType,webViewLink&supportsAllDrives=true`;
+    const res = await fetch(url, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    if (res.ok) {
+      return await res.json();
+    }
+  } catch (e) {
+    console.warn('Could not fetch folder metadata, using fallback', e);
+  }
+
+  return {
+    id: folderId,
+    name: 'SKP',
+    mimeType: 'application/vnd.google-apps.folder',
+    webViewLink: `https://drive.google.com/drive/folders/${folderId}`,
+  };
+}
+
+export async function getSkpRootFolder(): Promise<DriveFolder> {
+  return await getFolderMetadata(SKP_ROOT_FOLDER_ID);
 }
 
 /**
