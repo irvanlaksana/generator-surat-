@@ -5,7 +5,7 @@ import FormPanel from './FormPanel';
 import SuratPenyerahan from './SuratPenyerahan';
 import BastSheet from './BastSheet';
 import { Btn } from './ui';
-import { FileDown, Loader2, RotateCcw, Sparkles } from 'lucide-react';
+import { FileDown, Loader2, RotateCcw, Sparkles, UploadCloud } from 'lucide-react';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 
@@ -31,8 +31,17 @@ function loadInitial(): BastData {
   return CONTOH_RODA4;
 }
 
-export default function BastGenerator() {
-  const [data, setData] = useState<BastData>(loadInitial);
+interface BastGeneratorProps {
+  externalData?: BastData;
+  onDataChange?: (data: BastData) => void;
+  onOpenDriveModal?: () => void;
+}
+
+export default function BastGenerator({ externalData, onDataChange, onOpenDriveModal }: BastGeneratorProps = {}) {
+  const [data, setData] = useState<BastData>(() => {
+    if (externalData) return externalData;
+    return loadInitial();
+  });
   const [pageMode, setPageMode] = useState<PageMode>('both');
   const [zoom, setZoom] = useState(0.85);
   const [autoFit, setAutoFit] = useState(true);
@@ -41,6 +50,15 @@ export default function BastGenerator() {
   const previewRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    if (externalData) {
+      setData(externalData);
+    }
+  }, [externalData]);
+
+  useEffect(() => {
+    if (onDataChange) {
+      onDataChange(data);
+    }
     const id = setTimeout(() => {
       try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
@@ -49,7 +67,7 @@ export default function BastGenerator() {
       }
     }, 300);
     return () => clearTimeout(id);
-  }, [data]);
+  }, [data, onDataChange]);
 
   const fit = useCallback(() => {
     const el = previewRef.current;
@@ -285,6 +303,19 @@ export default function BastGenerator() {
                 Auto
               </button>
             </div>
+
+            {/* Simpan ke GDrive Button */}
+            {onOpenDriveModal && (
+              <button
+                type="button"
+                id="btn-bast-simpan-gdrive"
+                onClick={onOpenDriveModal}
+                className="flex items-center gap-1.5 px-3.5 py-1.5 bg-[#2D6A4F] text-white rounded-lg hover:bg-[#1B4332] active:scale-[0.98] transition-all font-semibold text-xs shadow-sm cursor-pointer"
+              >
+                <UploadCloud size={14} />
+                <span className="hidden sm:inline">Simpan ke GDrive</span>
+              </button>
+            )}
 
             {/* Simpan PDF Button */}
             <button

@@ -1,14 +1,15 @@
 import React, { useState } from 'react';
 import { LetterData } from '../types';
-import { FileDown, Loader2 } from 'lucide-react';
+import { FileDown, Loader2, UploadCloud } from 'lucide-react';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 
 interface LetterPreviewProps {
   data: LetterData;
+  onOpenDriveModal?: () => void;
 }
 
-export default function LetterPreview({ data }: LetterPreviewProps) {
+export default function LetterPreview({ data, onOpenDriveModal }: LetterPreviewProps) {
   const [isGenerating, setIsGenerating] = useState(false);
 
   const handleSavePdf = async () => {
@@ -76,6 +77,17 @@ export default function LetterPreview({ data }: LetterPreviewProps) {
   return (
     <div className="h-full flex flex-col bg-[#FDFBF7]">
       <div className="flex justify-end items-center gap-3 p-4 bg-[#EBEBE4] border-b border-[#D1D1CA] print:hidden">
+        {onOpenDriveModal && (
+          <button 
+            type="button"
+            id="btn-preview-simpan-gdrive"
+            onClick={onOpenDriveModal}
+            className="flex items-center gap-2 px-4 py-2.5 bg-[#2D6A4F] text-white rounded-lg hover:bg-[#1B4332] active:scale-[0.98] transition-all font-semibold text-sm shadow-sm cursor-pointer"
+          >
+            <UploadCloud size={16} />
+            Simpan ke GDrive
+          </button>
+        )}
         <button 
           id="btn-simpan-pdf"
           onClick={handleSavePdf}
