@@ -1,46 +1,107 @@
-import React, { useRef } from 'react';
+import React, { useState } from 'react';
 import { LetterData } from '../types';
-import { Printer } from 'lucide-react';
-import { useReactToPrint } from 'react-to-print';
+import { FileDown, Loader2 } from 'lucide-react';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 
 interface LetterPreviewProps {
   data: LetterData;
 }
 
 export default function LetterPreview({ data }: LetterPreviewProps) {
-  const contentRef = useRef<HTMLDivElement>(null);
-  
-  const handlePrint = useReactToPrint({
-    contentRef,
-    documentTitle: `Surat_Tugas_${data.customerName?.replace(/\s+/g, '_') || 'Penagihan'}`,
-  });
+  const [isGenerating, setIsGenerating] = useState(false);
 
-  const triggerPrint = () => {
-    // If in iframe, window.print or react-to-print sometimes fails depending on permissions.
-    // react-to-print creates an iframe. We'll try react-to-print first.
-    // If it fails or is blocked by sandbox, warn the user.
+  const handleSavePdf = async () => {
+    if (isGenerating) return;
+    setIsGenerating(true);
+
     try {
-      handlePrint();
+      const page1 = document.getElementById('letter-page-1');
+      if (!page1) {
+        throw new Error('Halaman surat tidak ditemukan');
+      }
+
+      // Initialize jsPDF with Folio / F4 dimension (210mm x 330mm)
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: [210, 330],
+        compress: true,
+      });
+
+      // Render Page 1
+      const canvas1 = await html2canvas(page1, {
+        scale: 2,
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: '#ffffff',
+        logging: false,
+      });
+
+      const imgData1 = canvas1.toDataURL('image/jpeg', 0.95);
+      pdf.addImage(imgData1, 'JPEG', 0, 0, 210, 330, undefined, 'FAST');
+
+      // Render Page 2 (Lampiran) if exists
+      const page2 = document.getElementById('letter-page-2');
+      if (page2) {
+        pdf.addPage([210, 330], 'portrait');
+        const canvas2 = await html2canvas(page2, {
+          scale: 2,
+          useCORS: true,
+          allowTaint: true,
+          backgroundColor: '#ffffff',
+          logging: false,
+        });
+        const imgData2 = canvas2.toDataURL('image/jpeg', 0.95);
+        pdf.addImage(imgData2, 'JPEG', 0, 0, 210, 330, undefined, 'FAST');
+      }
+
+      const safeName = (data.customerName || 'Penagihan').trim().replace(/[^a-zA-Z0-9_-]/g, '_');
+      const filename = `Surat_Tugas_${safeName}.pdf`;
+      pdf.save(filename);
     } catch (err) {
-      alert("Browser memblokir fitur cetak di dalam preview ini. Harap buka aplikasi di Tab Baru (ikon panah di kanan atas) untuk mencetak.");
+      console.error('Gagal membuat file PDF:', err);
+      // Fallback to browser print if canvas fails
+      const originalTitle = document.title;
+      document.title = `Surat_Tugas_${(data.customerName || 'Penagihan').replace(/[^a-zA-Z0-9_-]/g, '_')}`;
+      window.print();
+      setTimeout(() => {
+        document.title = originalTitle;
+      }, 1000);
+    } finally {
+      setIsGenerating(false);
     }
   };
 
   return (
     <div className="h-full flex flex-col bg-[#FDFBF7]">
-      <div className="flex justify-end p-4 bg-[#EBEBE4] border-b border-[#D1D1CA] print:hidden">
+      <div className="flex justify-end items-center gap-3 p-4 bg-[#EBEBE4] border-b border-[#D1D1CA] print:hidden">
         <button 
-          onClick={triggerPrint}
-          className="flex items-center gap-2 px-4 py-2 bg-[#5A5A40] text-white rounded-lg hover:bg-[#484833] transition-colors font-medium text-sm shadow-sm"
+          id="btn-simpan-pdf"
+          onClick={handleSavePdf}
+          disabled={isGenerating}
+          className="flex items-center gap-2 px-5 py-2.5 bg-[#5A5A40] text-white rounded-lg hover:bg-[#484833] active:scale-[0.98] transition-all font-semibold text-sm shadow-sm cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed"
         >
-          <Printer size={16} />
-          Cetak / Simpan PDF
+          {isGenerating ? (
+            <>
+              <Loader2 size={16} className="animate-spin" />
+              Menyimpan PDF...
+            </>
+          ) : (
+            <>
+              <FileDown size={16} />
+              Simpan PDF
+            </>
+          )}
         </button>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4 md:p-8 print:p-0 print:overflow-visible text-black bg-[#EBEBE4] print:bg-white" ref={contentRef}>
+      <div className="flex-1 overflow-y-auto p-4 md:p-8 print:p-0 print:overflow-visible text-black bg-[#EBEBE4] print:bg-white">
         {/* The Document Container - F4 Size (210x330mm) with 1cm Top Margin, 3.5cm Bottom Margin */}
-        <div className="max-w-[210mm] min-h-[330mm] mx-auto bg-white pt-[10mm] px-[20mm] pb-[35mm] shadow-[0_20px_50px_rgba(0,0,0,0.08)] border border-[#E5E5E0] font-serif print:shadow-none print:border-none print:p-0 print:pt-[10mm] print:px-[20mm] print:pb-[35mm] print:m-0 print:max-w-none print:min-h-[330mm] text-[15px] leading-snug">
+        <div 
+          id="letter-page-1"
+          className="w-[210mm] max-w-[210mm] min-h-[330mm] mx-auto bg-white pt-[10mm] px-[20mm] pb-[35mm] shadow-[0_20px_50px_rgba(0,0,0,0.08)] border border-[#E5E5E0] font-serif print:shadow-none print:border-none print:p-0 print:pt-[10mm] print:px-[20mm] print:pb-[35mm] print:m-0 print:max-w-none print:min-h-[330mm] text-[15px] leading-snug box-border"
+        >
           
           {/* Kop Surat Image */}
           <div style={{ marginTop: `${data.kopImageOffsetY}px`, marginBottom: `${data.kopImageMarginBottom}px` }}>
@@ -198,7 +259,10 @@ export default function LetterPreview({ data }: LetterPreviewProps) {
 
         {/* Lampiran Images Page */}
         {(data.attachments && data.attachments.length > 0) && (
-          <div className="max-w-[210mm] min-h-[330mm] mx-auto bg-white pt-[10mm] px-[20mm] pb-[35mm] shadow-[0_20px_50px_rgba(0,0,0,0.08)] border border-[#E5E5E0] font-serif print:shadow-none print:border-none print:p-0 print:pt-[10mm] print:px-[20mm] print:pb-[35mm] print:m-0 print:max-w-none print:min-h-[330mm] mt-8 print:mt-0 print:break-before-page">
+          <div 
+            id="letter-page-2"
+            className="w-[210mm] max-w-[210mm] min-h-[330mm] mx-auto bg-white pt-[10mm] px-[20mm] pb-[35mm] shadow-[0_20px_50px_rgba(0,0,0,0.08)] border border-[#E5E5E0] font-serif print:shadow-none print:border-none print:p-0 print:pt-[10mm] print:px-[20mm] print:pb-[35mm] print:m-0 print:max-w-none print:min-h-[330mm] mt-8 print:mt-0 print:break-before-page box-border"
+          >
             <h3 className="font-bold text-lg mb-6 text-center underline">Lampiran</h3>
             <div className="flex flex-col items-center gap-8">
               {data.attachments.map((att, idx) => (
