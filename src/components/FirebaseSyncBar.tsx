@@ -1,7 +1,21 @@
 import React, { useState, useEffect } from 'react';
-import { fetchFirebaseData, FirebaseApprovalDoc } from '../services/firebaseService';
+import { fetchFirebaseData, EmployeeDoc, DebtorDoc, FirebaseApprovalDoc } from '../services/firebaseService';
 import { LetterData, BastData } from '../types';
-import { Database, RefreshCw, Check, ArrowRight, UserCheck, FileCheck, Search, ShieldCheck } from 'lucide-react';
+import { 
+  Database, 
+  RefreshCw, 
+  Check, 
+  ArrowRight, 
+  UserCheck, 
+  FileCheck, 
+  Search, 
+  Building2, 
+  Users, 
+  FileText,
+  Filter,
+  Car,
+  Bike
+} from 'lucide-react';
 
 interface FirebaseSyncBarProps {
   onApplyToLetter?: (data: Partial<LetterData>) => void;
@@ -15,33 +29,26 @@ export default function FirebaseSyncBar({
   currentDocType,
 }: FirebaseSyncBarProps) {
   const [loading, setLoading] = useState(false);
-  const [items, setItems] = useState<FirebaseApprovalDoc[]>([]);
-  const [employees, setEmployees] = useState<FirebaseApprovalDoc[]>([]);
+  const [employees, setEmployees] = useState<EmployeeDoc[]>([]);
+  const [debtors, setDebtors] = useState<DebtorDoc[]>([]);
+  const [multifinances, setMultifinances] = useState<string[]>([]);
+  
   const [isOpen, setIsOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<'employees' | 'debtors' | 'all'>('debtors');
+  const [selectedMultifinance, setSelectedMultifinance] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedId, setSelectedId] = useState<string | null>(null);
   const [statusMsg, setStatusMsg] = useState<string>('');
+  const [successToast, setSuccessToast] = useState<string | null>(null);
 
   const loadData = async () => {
     setLoading(true);
     setStatusMsg('Menghubungkan ke Firestore...');
     try {
       const res = await fetchFirebaseData();
-      const combined = [...res.approvals, ...res.contracts];
-      
-      // Deduplicate by ID
-      const uniqueItems: FirebaseApprovalDoc[] = [];
-      const seen = new Set<string>();
-      for (const item of combined) {
-        if (!seen.has(item.id)) {
-          seen.add(item.id);
-          uniqueItems.push(item);
-        }
-      }
-
-      setItems(uniqueItems);
       setEmployees(res.employees);
-      setStatusMsg(`Tersinkron: ${uniqueItems.length} data approval/kontrak, ${res.employees.length} data petugas.`);
+      setDebtors(res.debtors);
+      setMultifinances(res.multifinances);
+      setStatusMsg(`Tersinkron: ${res.employees.length} data karyawan/petugas & ${res.debtors.length} data debitur dari ${res.multifinances.length} multifinance.`);
     } catch (err: any) {
       console.error('Error fetching Firestore data:', err);
       setStatusMsg('Gagal memuat data dari database: ' + (err?.message || 'Error'));
@@ -54,154 +61,136 @@ export default function FirebaseSyncBar({
     loadData();
   }, []);
 
-  const handleSelect = (item: FirebaseApprovalDoc) => {
-    setSelectedId(item.id);
+  const showNotification = (msg: string) => {
+    setSuccessToast(msg);
+    setTimeout(() => setSuccessToast(null), 3000);
+  };
 
-    // Extract debtor info
-    const debiturNama =
-      item.customerName ||
-      item.namaNasabah ||
-      item.namaDebitur ||
-      item.namaKonsumen ||
-      item.debiturNama ||
-      item.name ||
-      '';
-
-    const debiturNik = item.customerNik || item.nik || item.ktp || item.noKtp || '';
-    const debiturAlamat = item.customerAddress || item.alamat || item.alamatDebitur || item.alamatNasabah || '';
-    const debiturHp = item.customerPhone || item.telepon || item.noHp || item.hp || '';
-    const nomorKontrak = item.contractNumber || item.nomorKontrak || item.contractNo || item.noKontrak || item.id || '';
-    const krediturLeasing = item.creditorName || item.krediturLeasing || item.leasing || item.finco || 'PT. MITRA JASA TAMA';
-
-    // Petugas info
-    const petugasNama =
-      item.assigneeName ||
-      item.petugasNama ||
-      item.collectorName ||
-      item.namaPetugas ||
-      item.karyawanNama ||
-      '';
-    const petugasNik = item.assigneeId || item.petugasNik || item.idPetugas || item.nikKaryawan || '';
-
-    // Supervisor / Pemberi tugas
-    const pemberiTugas =
-      item.assignerName || item.namaPemberiTugas || item.supervisorName || item.direkturName || '';
-    const jabatanPemberi =
-      item.assignerPosition || item.jabatanPemberiTugas || 'Branch Manager / Supervisor';
-
-    // Vehicle info
-    const kendaraanMerk = item.vehicleBrand || item.kendaraanMerk || item.merk || '';
-    const kendaraanType = item.vehicleType || item.kendaraanType || item.tipe || item.model || '';
-    const kendaraanTahun = String(item.vehicleYear || item.kendaraanTahun || item.tahun || '');
-    const kendaraanWarna = item.vehicleColor || item.kendaraanWarna || item.warna || '';
-    const kendaraanNoPol = item.vehiclePoliceNo || item.kendaraanNoPol || item.nopol || item.platNomor || '';
-    const kendaraanNoRangka = item.vehicleChassisNo || item.kendaraanNoRangka || item.noRangka || item.vin || '';
-    const kendaraanNoMesin = item.vehicleEngineNo || item.kendaraanNoMesin || item.noMesin || '';
-    const kendaraanOdometer = item.vehicleOdometer || item.kendaraanOdometer || item.odometer || '';
-    const kendaraanBahanBakar = item.kendaraanBahanBakar || item.fuel || '1/2 Tangki';
-    const kendaraanStnk = item.vehicleStnk || item.kendaraanStnk || 'Ada';
-    const kendaraanBpkb = item.vehicleBpkbNo || item.kendaraanBpkb || 'Dalam Jaminan';
-
-    // Overdue / Tagihan
-    const totalTunggakan =
-      item.totalOverdue ||
-      item.customerTotalOverdue ||
-      item.totalTunggakan ||
-      item.tunggakan ||
-      'Rp 0';
-    const jatuhTempo = item.dueDate || item.customerDueDate || item.jatuhTempo || '';
-    const angsuran =
-      item.installmentAmount || item.customerInstallment || item.angsuran || 'Rp 0';
-    const denda = item.penaltyAmount || item.customerPenalty || item.denda || 'Rp 0';
-
-    const jenisKendaraan =
-      item.jenisKendaraan ||
-      (item.vehicleBrand?.toLowerCase().includes('honda beat') ||
-      item.vehicleBrand?.toLowerCase().includes('yamaha') ||
-      item.vehicleType?.toLowerCase().includes('vario') ||
-      item.vehicleType?.toLowerCase().includes('nmax') ||
-      item.vehicleType?.toLowerCase().includes('scoopy')
-        ? 'roda2'
-        : 'roda4');
-
-    // 1. If currently in Surat Tugas
+  // Apply Employee data to Letter & BAST
+  const applyEmployee = (emp: EmployeeDoc) => {
     if (onApplyToLetter) {
-      const letterUpdate: Partial<LetterData> = {};
-      if (debiturNama) letterUpdate.customerName = debiturNama;
-      if (debiturAlamat) letterUpdate.customerAddress = debiturAlamat;
-      if (nomorKontrak) letterUpdate.customerContract = nomorKontrak;
-      if (kendaraanMerk) {
-        letterUpdate.vehicleBrand = kendaraanType
-          ? `${kendaraanMerk} / ${kendaraanType}`
-          : kendaraanMerk;
-      }
-      if (kendaraanNoPol) letterUpdate.vehiclePlate = kendaraanNoPol;
-      if (petugasNama) letterUpdate.assigneeName = petugasNama;
-      if (petugasNik) letterUpdate.assigneeNIK = petugasNik;
-      if (pemberiTugas) letterUpdate.assignerName = pemberiTugas;
-      if (jabatanPemberi) letterUpdate.assignerPosition = jabatanPemberi;
-      if (krediturLeasing) letterUpdate.clientName = krediturLeasing;
-      if (jatuhTempo) letterUpdate.customerDueDate = jatuhTempo;
-      if (angsuran) letterUpdate.customerInstallment = angsuran;
-      if (denda) letterUpdate.customerPenalty = denda;
-
-      onApplyToLetter(letterUpdate);
+      onApplyToLetter({
+        assigneeName: emp.nama,
+        assigneeNIK: emp.nik,
+        assigneePosition: emp.jabatan,
+      });
     }
 
-    // 2. If in BAST
     if (onApplyToBast) {
-      const bastUpdate: Partial<BastData> = {};
-      if (nomorKontrak) bastUpdate.nomorKontrak = nomorKontrak;
-      if (debiturNama) bastUpdate.debiturNama = debiturNama;
-      if (debiturNik) bastUpdate.debiturNik = debiturNik;
-      if (debiturAlamat) bastUpdate.debiturAlamat = debiturAlamat;
-      if (debiturHp) bastUpdate.debiturHp = debiturHp;
-      if (petugasNama) bastUpdate.petugasNama = petugasNama;
-      if (petugasNik) bastUpdate.petugasNik = petugasNik;
-      if (krediturLeasing) bastUpdate.krediturLeasing = krediturLeasing;
-      if (kendaraanMerk) bastUpdate.kendaraanMerk = kendaraanMerk;
-      if (kendaraanType) bastUpdate.kendaraanType = kendaraanType;
-      if (kendaraanTahun) bastUpdate.kendaraanTahun = kendaraanTahun;
-      if (kendaraanWarna) bastUpdate.kendaraanWarna = kendaraanWarna;
-      if (kendaraanNoPol) bastUpdate.kendaraanNoPol = kendaraanNoPol;
-      if (kendaraanNoRangka) bastUpdate.kendaraanNoRangka = kendaraanNoRangka;
-      if (kendaraanNoMesin) bastUpdate.kendaraanNoMesin = kendaraanNoMesin;
-      if (kendaraanOdometer) bastUpdate.kendaraanOdometer = kendaraanOdometer;
-      if (kendaraanBahanBakar) bastUpdate.kendaraanBahanBakar = kendaraanBahanBakar;
-      if (kendaraanStnk) bastUpdate.kendaraanStnk = kendaraanStnk;
-      if (kendaraanBpkb) bastUpdate.kendaraanBpkb = kendaraanBpkb;
-      bastUpdate.jenis = jenisKendaraan;
-
-      onApplyToBast(bastUpdate);
+      onApplyToBast({
+        petugasNama: emp.nama,
+        petugasNik: emp.nik,
+        petugasJabatan: emp.jabatan,
+        petugasHp: emp.hp || '',
+      });
     }
 
+    showNotification(`Data Petugas "${emp.nama}" berhasil diterapkan.`);
     setIsOpen(false);
   };
 
-  const filteredItems = items.filter((item) => {
+  // Apply Debtor & Multifinance data to Letter & BAST
+  const applyDebtor = (deb: DebtorDoc) => {
+    if (onApplyToLetter) {
+      onApplyToLetter({
+        clientName: deb.multifinance,
+        customerContract: deb.nomorKontrak,
+        customerName: deb.namaNasabah,
+        customerAddress: deb.alamat,
+        customerDueDate: deb.jatuhTempo,
+        customerPenalty: deb.denda,
+        customerInstallment: deb.angsuran,
+        customerUnpaidInstallmentCount: deb.unpaidCount || '10 Bulan',
+        vehicleBrand: deb.kendaraanType ? `${deb.kendaraanMerk} / ${deb.kendaraanType}` : deb.kendaraanMerk,
+        vehiclePlate: deb.kendaraanNoPol,
+      });
+    }
+
+    if (onApplyToBast) {
+      onApplyToBast({
+        krediturLeasing: deb.multifinance,
+        nomorKontrak: deb.nomorKontrak,
+        debiturNama: deb.namaNasabah,
+        debiturNik: deb.nik || '',
+        debiturAlamat: deb.alamat,
+        debiturHp: deb.hp || '',
+        kendaraanMerk: deb.kendaraanMerk,
+        kendaraanType: deb.kendaraanType,
+        kendaraanNoPol: deb.kendaraanNoPol,
+        kendaraanNoRangka: deb.kendaraanNoRangka || '',
+        kendaraanNoMesin: deb.kendaraanNoMesin || '',
+        kendaraanTahun: deb.kendaraanTahun || '',
+        kendaraanWarna: deb.kendaraanWarna || '',
+        kendaraanOdometer: deb.kendaraanOdometer || '',
+        kendaraanStnk: deb.kendaraanStnk || 'Ada',
+        kendaraanBpkb: deb.kendaraanBpkb || `Dalam Jaminan ${deb.multifinance}`,
+        kendaraanBahanBakar: deb.kendaraanBahanBakar || '1/2 Tangki',
+        jenis: deb.jenisKendaraan || 'roda4',
+      });
+    }
+
+    showNotification(`Data Debitur "${deb.namaNasabah}" (${deb.multifinance}) berhasil diterapkan.`);
+    setIsOpen(false);
+  };
+
+  // Apply Both Debtor + Employee at once
+  const applyAll = (deb: DebtorDoc) => {
+    applyDebtor(deb);
+    if (deb.petugasNama) {
+      if (onApplyToLetter) {
+        onApplyToLetter({
+          assigneeName: deb.petugasNama,
+          assigneeNIK: deb.petugasNik || '',
+          assigneePosition: deb.petugasJabatan || 'Petugas Penagihan',
+        });
+      }
+      if (onApplyToBast) {
+        onApplyToBast({
+          petugasNama: deb.petugasNama,
+          petugasNik: deb.petugasNik || '',
+          petugasJabatan: deb.petugasJabatan || 'Petugas Penagihan',
+        });
+      }
+    }
+  };
+
+  // Filter debtors
+  const filteredDebtors = debtors.filter((deb) => {
     const q = searchTerm.toLowerCase();
-    const name = (
-      item.customerName ||
-      item.namaNasabah ||
-      item.namaDebitur ||
-      item.debiturNama ||
-      item.name ||
-      ''
-    ).toLowerCase();
-    const contract = (
-      item.contractNumber ||
-      item.nomorKontrak ||
-      item.contractNo ||
-      item.id ||
-      ''
-    ).toLowerCase();
-    const nopol = (item.vehiclePoliceNo || item.kendaraanNoPol || item.nopol || '').toLowerCase();
-    const officer = (item.assigneeName || item.petugasNama || item.collectorName || '').toLowerCase();
-    return name.includes(q) || contract.includes(q) || nopol.includes(q) || officer.includes(q);
+    const matchesQuery =
+      deb.namaNasabah.toLowerCase().includes(q) ||
+      deb.nomorKontrak.toLowerCase().includes(q) ||
+      deb.kendaraanNoPol.toLowerCase().includes(q) ||
+      deb.kendaraanMerk.toLowerCase().includes(q) ||
+      deb.alamat.toLowerCase().includes(q);
+
+    const matchesMultifinance =
+      selectedMultifinance === 'all' || deb.multifinance === selectedMultifinance;
+
+    return matchesQuery && matchesMultifinance;
+  });
+
+  // Filter employees
+  const filteredEmployees = employees.filter((emp) => {
+    const q = searchTerm.toLowerCase();
+    return (
+      emp.nama.toLowerCase().includes(q) ||
+      emp.nik.toLowerCase().includes(q) ||
+      emp.jabatan.toLowerCase().includes(q) ||
+      (emp.cabang && emp.cabang.toLowerCase().includes(q))
+    );
   });
 
   return (
-    <div className="bg-[#5A5A40]/10 border-b border-[#5A5A40]/20 px-4 py-2 print:hidden">
+    <div className="bg-[#5A5A40]/10 border-b border-[#5A5A40]/20 px-4 py-2 print:hidden relative">
+      {/* Toast Notification */}
+      {successToast && (
+        <div className="fixed bottom-6 right-6 z-50 bg-emerald-700 text-white px-4 py-2.5 rounded-xl shadow-xl flex items-center gap-2 text-xs font-semibold animate-in fade-in slide-in-from-bottom-2">
+          <Check size={16} />
+          {successToast}
+        </div>
+      )}
+
       <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <div className="p-1.5 bg-[#5A5A40] text-white rounded-md shadow-xs">
@@ -213,12 +202,12 @@ export default function FirebaseSyncBar({
                 Database Firestore Terhubung
                 <span className="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
               </span>
-              <span className="text-[10px] text-slate-500 bg-white/80 border border-slate-200 px-1.5 py-0.5 rounded font-mono">
-                {items.length} Data Tersedia
+              <span className="text-[10px] text-slate-600 bg-white/80 border border-slate-200 px-1.5 py-0.5 rounded font-medium">
+                {employees.length} Karyawan | {debtors.length} Debitur ({multifinances.length} Multifinance)
               </span>
             </div>
-            <p className="text-[10.5px] text-slate-600 truncate max-w-[400px]">
-              {statusMsg || 'Pilih data nasabah/approval untuk mengisi formulir otomatis'}
+            <p className="text-[10.5px] text-slate-600 truncate max-w-[450px]">
+              {statusMsg || 'Tarik data karyawan atau data nasabah dari semua multifinance'}
             </p>
           </div>
         </div>
@@ -232,58 +221,125 @@ export default function FirebaseSyncBar({
             title="Refresh Data dari Firestore"
           >
             <RefreshCw size={13} className={loading ? 'animate-spin text-[#5A5A40]' : ''} />
-            <span className="hidden sm:inline">Refresh Data</span>
+            <span className="hidden sm:inline">Refresh</span>
           </button>
 
+          {/* Tombol Pilih Karyawan */}
           <button
             type="button"
-            onClick={() => setIsOpen(true)}
+            onClick={() => {
+              setActiveTab('employees');
+              setIsOpen(true);
+            }}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-slate-100 text-slate-800 border border-slate-300 rounded-lg text-xs font-bold transition shadow-xs cursor-pointer"
+          >
+            <Users size={14} className="text-[#5A5A40]" />
+            <span>Tarik Karyawan ({employees.length})</span>
+          </button>
+
+          {/* Tombol Pilih Debitur Semua Multifinance */}
+          <button
+            type="button"
+            onClick={() => {
+              setActiveTab('debtors');
+              setIsOpen(true);
+            }}
             className="flex items-center gap-1.5 px-3.5 py-1.5 bg-[#5A5A40] text-white hover:bg-[#484833] rounded-lg text-xs font-bold transition shadow-xs cursor-pointer"
           >
-            <FileCheck size={14} />
-            Pilih Data Otomatis
+            <Building2 size={14} />
+            <span>Tarik Debitur ({debtors.length})</span>
           </button>
         </div>
       </div>
 
-      {/* Modal Dialog for selecting item from Firestore */}
+      {/* Modal Dialog for selecting Data from Firestore */}
       {isOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs">
-          <div className="bg-white w-full max-w-3xl rounded-2xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[85vh] animate-in fade-in zoom-in-95 duration-150">
+          <div className="bg-white w-full max-w-4xl rounded-2xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[88vh] animate-in fade-in zoom-in-95 duration-150">
             {/* Modal Header */}
-            <div className="px-5 py-4 border-b border-slate-200 bg-slate-50 flex items-center justify-between">
+            <div className="px-5 py-3.5 border-b border-slate-200 bg-slate-50 flex items-center justify-between">
               <div className="flex items-center gap-2.5">
                 <div className="p-2 bg-[#5A5A40] text-white rounded-xl">
                   <Database size={18} />
                 </div>
                 <div>
                   <h3 className="text-sm font-bold text-slate-900">
-                    Pilih Data Nasabah / Approval dari Firestore
+                    Pusat Sinkronisasi Data Firestore
                   </h3>
                   <p className="text-xs text-slate-500">
-                    Data debitur, kendaraan, dan karyawan akan langsung terisi ke template{' '}
-                    <span className="font-semibold text-[#5A5A40]">
-                      {currentDocType === 'surat_tugas' ? 'Surat Tugas' : 'BAST'}
-                    </span>
+                    Tarik data karyawan ke penerima tugas atau data nasabah dari semua multifinance
                   </p>
                 </div>
               </div>
               <button
                 type="button"
                 onClick={() => setIsOpen(false)}
-                className="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg hover:bg-slate-200/50 transition cursor-pointer"
+                className="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg hover:bg-slate-200/50 transition cursor-pointer font-bold"
               >
                 ✕
               </button>
             </div>
 
+            {/* Sub Header / Tabs Selector */}
+            <div className="px-5 py-2.5 bg-slate-100/70 border-b border-slate-200 flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-center gap-1.5 bg-white p-1 rounded-xl border border-slate-200 shadow-2xs">
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('debtors')}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
+                    activeTab === 'debtors'
+                      ? 'bg-[#5A5A40] text-white shadow-xs'
+                      : 'text-slate-600 hover:bg-slate-100'
+                  }`}
+                >
+                  <Building2 size={13} />
+                  Debitur Multifinance ({debtors.length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('employees')}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
+                    activeTab === 'employees'
+                      ? 'bg-[#5A5A40] text-white shadow-xs'
+                      : 'text-slate-600 hover:bg-slate-100'
+                  }`}
+                >
+                  <Users size={13} />
+                  Data Karyawan / Petugas ({employees.length})
+                </button>
+              </div>
+
+              {/* Multifinance Dropdown Filter (only when on debtors tab) */}
+              {activeTab === 'debtors' && (
+                <div className="flex items-center gap-1.5">
+                  <Filter size={13} className="text-slate-400" />
+                  <select
+                    value={selectedMultifinance}
+                    onChange={(e) => setSelectedMultifinance(e.target.value)}
+                    className="bg-white border border-slate-200 rounded-lg px-2.5 py-1 text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#5A5A40]"
+                  >
+                    <option value="all">Semua Multifinance ({debtors.length})</option>
+                    {multifinances.map((mf) => (
+                      <option key={mf} value={mf}>
+                        {mf}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+            </div>
+
             {/* Search Bar */}
-            <div className="p-4 border-b border-slate-100 bg-white">
+            <div className="p-3.5 border-b border-slate-100 bg-white">
               <div className="relative">
                 <Search className="absolute left-3.5 top-2.5 text-slate-400" size={16} />
                 <input
                   type="text"
-                  placeholder="Cari berdasarkan nama nasabah, nomor kontrak (APP-CTR-...), plat nomor, atau petugas..."
+                  placeholder={
+                    activeTab === 'employees'
+                      ? 'Cari nama karyawan, NIK, jabatan, atau cabang...'
+                      : 'Cari nama nasabah, nomor kontrak, plat nomor, merk kendaraan, atau alamat...'
+                  }
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#5A5A40] focus:bg-white transition"
@@ -292,115 +348,143 @@ export default function FirebaseSyncBar({
               </div>
             </div>
 
-            {/* Items List */}
+            {/* Content List Area */}
             <div className="p-4 overflow-y-auto flex-1 space-y-2.5 custom-scrollbar bg-slate-50/50">
-              {filteredItems.length === 0 ? (
-                <div className="text-center py-12 px-4 bg-white rounded-xl border border-slate-200">
-                  <Database className="mx-auto text-slate-300 mb-2" size={36} />
-                  <p className="text-xs font-semibold text-slate-700">Tidak ada data yang cocok</p>
-                  <p className="text-[11px] text-slate-400 mt-1">
-                    {searchTerm
-                      ? `Tidak ditemukan hasil untuk "${searchTerm}".`
-                      : 'Koleksi approvals/contracts masih kosong atau belum ada dokumen.'}
-                  </p>
-                </div>
-              ) : (
-                filteredItems.map((item) => {
-                  const customerName =
-                    item.customerName ||
-                    item.namaNasabah ||
-                    item.namaDebitur ||
-                    item.namaKonsumen ||
-                    item.debiturNama ||
-                    item.name ||
-                    'Nama Tidak Diketahui';
-
-                  const contractNo =
-                    item.contractNumber ||
-                    item.nomorKontrak ||
-                    item.contractNo ||
-                    item.noKontrak ||
-                    item.id;
-
-                  const vehicleInfo =
-                    [
-                      item.vehicleBrand || item.kendaraanMerk || item.merk,
-                      item.vehicleType || item.kendaraanType || item.tipe,
-                      item.vehiclePoliceNo || item.kendaraanNoPol || item.nopol,
-                    ]
-                      .filter(Boolean)
-                      .join(' - ') || 'Data kendaraan belum terisi';
-
-                  const officerName =
-                    item.assigneeName ||
-                    item.petugasNama ||
-                    item.collectorName ||
-                    item.namaPetugas ||
-                    item.karyawanNama ||
-                    '-';
-
-                  const overdue =
-                    item.totalOverdue ||
-                    item.customerTotalOverdue ||
-                    item.totalTunggakan ||
-                    item.tunggakan ||
-                    '';
-
-                  const isSelected = selectedId === item.id;
-
-                  return (
-                    <div
-                      key={item.id}
-                      onClick={() => handleSelect(item)}
-                      className={`p-3.5 rounded-xl border transition-all cursor-pointer bg-white flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
-                        isSelected
-                          ? 'border-[#5A5A40] ring-2 ring-[#5A5A40]/20 shadow-sm'
-                          : 'border-slate-200 hover:border-slate-300 hover:shadow-sm'
-                      }`}
-                    >
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs font-bold text-slate-900 uppercase">
-                            {customerName}
-                          </span>
-                          <span className="text-[10px] font-mono font-medium px-2 py-0.5 rounded bg-slate-100 text-slate-600 border border-slate-200">
-                            {contractNo}
-                          </span>
-                        </div>
-
-                        <div className="text-[11px] text-slate-600 flex flex-wrap items-center gap-x-3 gap-y-1">
-                          <span className="flex items-center gap-1 font-medium text-slate-700">
-                            🚗 {vehicleInfo}
-                          </span>
-                          <span className="flex items-center gap-1 text-slate-500">
-                            👤 Petugas: <strong className="text-slate-700">{officerName}</strong>
-                          </span>
-                          {overdue && (
-                            <span className="text-rose-600 font-semibold">
-                              Tunggakan: {overdue}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-2 shrink-0">
-                        <button
-                          type="button"
-                          className="px-3 py-1.5 bg-[#5A5A40] hover:bg-[#484833] text-white text-xs font-bold rounded-lg transition flex items-center gap-1 shadow-xs cursor-pointer"
-                        >
-                          Terapkan <ArrowRight size={13} />
-                        </button>
-                      </div>
+              {/* 1. DEBTORS TAB */}
+              {activeTab === 'debtors' && (
+                <>
+                  {filteredDebtors.length === 0 ? (
+                    <div className="text-center py-12 px-4 bg-white rounded-xl border border-slate-200">
+                      <Building2 className="mx-auto text-slate-300 mb-2" size={36} />
+                      <p className="text-xs font-semibold text-slate-700">Tidak ada data debitur yang cocok</p>
+                      <p className="text-[11px] text-slate-400 mt-1">
+                        Coba ubah kata kunci pencarian atau pilih opsi "Semua Multifinance".
+                      </p>
                     </div>
-                  );
-                })
+                  ) : (
+                    filteredDebtors.map((deb) => (
+                      <div
+                        key={deb.id}
+                        className="p-3.5 rounded-xl border border-slate-200 bg-white hover:border-[#5A5A40]/60 hover:shadow-md transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+                      >
+                        <div className="space-y-1.5 flex-1">
+                          {/* Header Debitur Item */}
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="text-xs font-extrabold text-slate-900 uppercase">
+                              {deb.namaNasabah}
+                            </span>
+                            <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-emerald-50 text-emerald-800 border border-emerald-200">
+                              {deb.multifinance}
+                            </span>
+                            <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-100 text-slate-700 border border-slate-200">
+                              No. Kontrak: {deb.nomorKontrak}
+                            </span>
+                          </div>
+
+                          {/* Info baris 1: Kendaraan & Plat */}
+                          <div className="text-[11px] text-slate-700 flex flex-wrap items-center gap-x-3 gap-y-1">
+                            <span className="flex items-center gap-1 font-semibold text-slate-800">
+                              {deb.jenisKendaraan === 'roda2' ? <Bike size={14} className="text-slate-600" /> : <Car size={14} className="text-slate-600" />}
+                              {deb.kendaraanMerk} {deb.kendaraanType} ({deb.kendaraanNoPol})
+                            </span>
+                            <span className="text-slate-500">
+                              📍 {deb.alamat}
+                            </span>
+                          </div>
+
+                          {/* Info baris 2: Tunggakan & Angsuran */}
+                          <div className="text-[10.5px] text-slate-600 flex flex-wrap items-center gap-x-3 gap-y-0.5">
+                            <span className="text-rose-600 font-semibold">
+                              Denda: {deb.denda}
+                            </span>
+                            <span>
+                              Angsuran: <strong>{deb.angsuran}</strong>
+                            </span>
+                            <span>
+                              Jatuh Tempo: <strong>{deb.jatuhTempo}</strong>
+                            </span>
+                            {deb.petugasNama && (
+                              <span className="text-[#5A5A40] font-medium">
+                                Petugas Terkait: {deb.petugasNama}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Action Buttons */}
+                        <div className="flex items-center gap-2 shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => applyDebtor(deb)}
+                            className="px-3.5 py-2 bg-[#5A5A40] hover:bg-[#484833] text-white text-xs font-bold rounded-lg transition flex items-center gap-1.5 shadow-xs cursor-pointer active:scale-95"
+                          >
+                            Tarik Data Nasabah <ArrowRight size={13} />
+                          </button>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </>
+              )}
+
+              {/* 2. EMPLOYEES TAB */}
+              {activeTab === 'employees' && (
+                <>
+                  {filteredEmployees.length === 0 ? (
+                    <div className="text-center py-12 px-4 bg-white rounded-xl border border-slate-200">
+                      <Users className="mx-auto text-slate-300 mb-2" size={36} />
+                      <p className="text-xs font-semibold text-slate-700">Tidak ada data karyawan yang cocok</p>
+                      <p className="text-[11px] text-slate-400 mt-1">
+                        Coba ketik nama atau NIK petugas lainnya.
+                      </p>
+                    </div>
+                  ) : (
+                    filteredEmployees.map((emp) => (
+                      <div
+                        key={emp.id}
+                        className="p-3.5 rounded-xl border border-slate-200 bg-white hover:border-[#5A5A40]/60 hover:shadow-md transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+                      >
+                        <div className="space-y-1">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="text-xs font-extrabold text-slate-900 uppercase">
+                              {emp.nama}
+                            </span>
+                            <span className="text-[10.5px] font-semibold px-2 py-0.5 rounded bg-blue-50 text-blue-800 border border-blue-200">
+                              {emp.jabatan}
+                            </span>
+                          </div>
+
+                          <div className="text-[11px] text-slate-600 flex flex-wrap items-center gap-x-3 gap-y-0.5">
+                            <span className="font-mono text-slate-700 font-medium">
+                              NIK: <strong>{emp.nik}</strong>
+                            </span>
+                            {emp.hp && <span>📞 {emp.hp}</span>}
+                            {emp.cabang && <span>🏢 {emp.cabang}</span>}
+                            <span className="text-slate-500">{emp.perusahaan}</span>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2 shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => applyEmployee(emp)}
+                            className="px-3.5 py-2 bg-[#2D6A4F] hover:bg-[#1B4332] text-white text-xs font-bold rounded-lg transition flex items-center gap-1.5 shadow-xs cursor-pointer active:scale-95"
+                          >
+                            <UserCheck size={14} />
+                            Terapkan Sebagai Penerima Tugas
+                          </button>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </>
               )}
             </div>
 
             {/* Modal Footer */}
             <div className="px-5 py-3 border-t border-slate-200 bg-slate-50 flex items-center justify-between">
               <span className="text-[11px] text-slate-500">
-                Data disinkronkan secara real-time dari Firestore Database.
+                Pilih salah satu untuk langsung mengisi formulir Surat Tugas & BAST.
               </span>
               <button
                 type="button"

@@ -113,8 +113,8 @@ export function syncChecklist(jenis: VehicleType, current: ChecklistMap = {}): C
 
 export const BLANK_DATA: BastData = {
   jenis: 'roda4',
-  nomorBast: 'BAST-MJI/2026/08/0101',
-  nomorPenyerahan: 'SP-MJI/2026/08/0101',
+  nomorBast: '001/BAST/MJI/29/VIII/2026',
+  nomorPenyerahan: '001/SPK/MJI/29/VIII/2026',
   perusahaan: 'PT. MITRA JASATRIA INDONESIA',
   cabang: 'Cabang Purwokerto',
   alamat: 'Jl. Gerilya No. 45, Purwokerto Selatan, Banyumas, Jawa Tengah',
@@ -162,8 +162,8 @@ export const BLANK_DATA: BastData = {
 export const CONTOH_RODA2: BastData = {
   ...BLANK_DATA,
   jenis: 'roda2',
-  nomorBast: 'BAST-MJI/R2/2026/08/0483',
-  nomorPenyerahan: 'SP-MJI/R2/2026/08/0483',
+  nomorBast: '002/BAST/MJI/29/VIII/2026',
+  nomorPenyerahan: '002/SPK/MJI/29/VIII/2026',
   kendaraanMerk: 'YAMAHA',
   kendaraanType: 'VIXION 150 DOHC',
   kendaraanTahun: '2022',

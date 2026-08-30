@@ -32,16 +32,27 @@ function loadInitial(): BastData {
 }
 
 interface BastGeneratorProps {
+  data?: BastData;
+  onChange?: (data: BastData) => void;
   externalData?: BastData;
   onDataChange?: (data: BastData) => void;
   onOpenDriveModal?: () => void;
 }
 
-export default function BastGenerator({ externalData, onDataChange, onOpenDriveModal }: BastGeneratorProps = {}) {
-  const [data, setData] = useState<BastData>(() => {
-    if (externalData) return externalData;
-    return loadInitial();
-  });
+export default function BastGenerator({
+  data: propData,
+  onChange: propOnChange,
+  externalData,
+  onDataChange,
+  onOpenDriveModal,
+}: BastGeneratorProps = {}) {
+  // Support both (data, onChange) and (externalData, onDataChange)
+  const isControlled = Boolean(propData || externalData);
+  const activeOnChange = propOnChange || onDataChange;
+
+  const [internalData, setInternalData] = useState<BastData>(() => loadInitial());
+  const data = (propData || externalData) ?? internalData;
+
   const [pageMode, setPageMode] = useState<PageMode>('both');
   const [zoom, setZoom] = useState(0.85);
   const [autoFit, setAutoFit] = useState(true);
@@ -49,25 +60,28 @@ export default function BastGenerator({ externalData, onDataChange, onOpenDriveM
   const [activeTabMobile, setActiveTabMobile] = useState<'form' | 'preview'>('form');
   const previewRef = useRef<HTMLDivElement>(null);
 
+  // Debounced auto-save to localStorage
   useEffect(() => {
-    if (externalData) {
-      setData(externalData);
-    }
-  }, [externalData]);
-
-  useEffect(() => {
-    if (onDataChange) {
-      onDataChange(data);
-    }
     const id = setTimeout(() => {
       try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
       } catch {
         /* ignore */
       }
-    }, 300);
+    }, 400);
     return () => clearTimeout(id);
-  }, [data, onDataChange]);
+  }, [data]);
+
+  const updateData = useCallback(
+    (updater: (prev: BastData) => BastData) => {
+      if (isControlled && activeOnChange) {
+        activeOnChange(updater(data));
+      } else {
+        setInternalData(updater);
+      }
+    },
+    [isControlled, activeOnChange, data]
+  );
 
   const fit = useCallback(() => {
     const el = previewRef.current;
@@ -86,32 +100,33 @@ export default function BastGenerator({ externalData, onDataChange, onOpenDriveM
 
   const set = useCallback(
     <K extends keyof BastData>(key: K, value: BastData[K]) =>
-      setData((d) => ({ ...d, [key]: value })),
-    [],
+      updateData((d) => ({ ...d, [key]: value })),
+    [updateData],
   );
 
   const setJenis = useCallback(
     (j: VehicleType) =>
-      setData((d) => ({ ...d, jenis: j, checklist: syncChecklist(j, d.checklist) })),
-    [],
+      updateData((d) => ({ ...d, jenis: j, checklist: syncChecklist(j, d.checklist) })),
+    [updateData],
   );
 
   const setChecklist = useCallback(
-    (c: ChecklistMap) => setData((d) => ({ ...d, checklist: c })),
-    [],
+    (c: ChecklistMap) => updateData((d) => ({ ...d, checklist: c })),
+    [updateData],
   );
 
-  const contoh = () => setData(data.jenis === 'roda2' ? CONTOH_RODA2 : CONTOH_RODA4);
+  const contoh = () =>
+    updateData((d) => (d.jenis === 'roda2' ? CONTOH_RODA2 : CONTOH_RODA4));
   
   const reset = () =>
-    setData({
+    updateData((d) => ({
       ...BLANK_DATA,
-      jenis: data.jenis,
-      perusahaan: data.perusahaan,
-      cabang: data.cabang,
-      alamat: data.alamat,
-      checklist: syncChecklist(data.jenis, {}),
-    });
+      jenis: d.jenis,
+      perusahaan: d.perusahaan,
+      cabang: d.cabang,
+      alamat: d.alamat,
+      checklist: syncChecklist(d.jenis, {}),
+    }));
 
   const zoomBy = (d: number) => {
     setAutoFit(false);
@@ -171,12 +186,12 @@ export default function BastGenerator({ externalData, onDataChange, onOpenDriveM
   };
 
   return (
-    <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
+    <div className="flex-1 flex flex-col lg:flex-row overflow-hidden min-h-0">
       {/* Mobile Tab Switcher */}
-      <div className="lg:hidden flex bg-[#EBEBE4] border-b border-[#D1D1CA] print:hidden">
+      <div className="lg:hidden flex bg-[#EBEBE4] border-b border-[#D1D1CA] print:hidden shrink-0">
         <button
           onClick={() => setActiveTabMobile('form')}
-          className={`flex-1 py-3 text-xs font-bold transition-colors ${
+          className={`flex-1 py-2.5 text-xs font-bold transition-colors ${
             activeTabMobile === 'form'
               ? 'text-[#5A5A40] border-b-2 border-[#5A5A40] bg-white/50'
               : 'text-[#8A8A7A] hover:text-[#4A4A4A]'
@@ -186,7 +201,7 @@ export default function BastGenerator({ externalData, onDataChange, onOpenDriveM
         </button>
         <button
           onClick={() => setActiveTabMobile('preview')}
-          className={`flex-1 py-3 text-xs font-bold transition-colors ${
+          className={`flex-1 py-2.5 text-xs font-bold transition-colors ${
             activeTabMobile === 'preview'
               ? 'text-[#5A5A40] border-b-2 border-[#5A5A40] bg-white/50'
               : 'text-[#8A8A7A] hover:text-[#4A4A4A]'
@@ -198,42 +213,42 @@ export default function BastGenerator({ externalData, onDataChange, onOpenDriveM
 
       {/* ============ SIDEBAR / FORM ============ */}
       <aside
-        className={`w-full lg:w-[420px] xl:w-[460px] lg:shrink-0 lg:overflow-y-auto border-r border-slate-300 bg-slate-50 flex-col ${
+        className={`w-full lg:w-[350px] xl:w-[380px] shrink-0 border-r border-slate-300 bg-slate-50 flex flex-col overflow-hidden ${
           activeTabMobile === 'form' ? 'flex' : 'hidden lg:flex'
         } print:hidden`}
       >
-        <div className="sticky top-0 z-10 border-b border-slate-200 bg-white/95 px-4 py-3 backdrop-blur shadow-xs">
+        <div className="sticky top-0 z-10 border-b border-slate-200 bg-white/95 px-3 py-2 backdrop-blur shadow-xs shrink-0">
           <div className="flex items-center justify-between gap-2">
             <div>
-              <h2 className="text-sm font-bold tracking-tight text-slate-900">
+              <h2 className="text-xs font-bold tracking-tight text-slate-900 leading-tight">
                 Data BAST Kendaraan
               </h2>
-              <p className="text-[10.5px] text-slate-500">
-                Berita Acara & Surat Penyerahan Sukarela
+              <p className="text-[10px] text-slate-500 leading-tight">
+                Berita Acara & Surat Penyerahan
               </p>
             </div>
-            <div className="flex gap-1.5">
+            <div className="flex gap-1">
               <button
                 type="button"
                 onClick={contoh}
-                className="flex items-center gap-1 px-2.5 py-1 text-[11px] font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-md border border-slate-200 transition cursor-pointer"
+                className="flex items-center gap-1 px-2 py-1 text-[10.5px] font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-md border border-slate-200 transition cursor-pointer"
               >
-                <Sparkles size={12} />
+                <Sparkles size={11} />
                 Contoh
               </button>
               <button
                 type="button"
                 onClick={reset}
-                className="flex items-center gap-1 px-2.5 py-1 text-[11px] font-semibold text-slate-600 hover:text-slate-900 bg-white hover:bg-slate-100 rounded-md border border-slate-200 transition cursor-pointer"
+                className="flex items-center gap-1 px-2 py-1 text-[10.5px] font-semibold text-slate-600 hover:text-slate-900 bg-white hover:bg-slate-100 rounded-md border border-slate-200 transition cursor-pointer"
               >
-                <RotateCcw size={12} />
+                <RotateCcw size={11} />
                 Reset
               </button>
             </div>
           </div>
         </div>
 
-        <div className="p-3.5 flex-1 overflow-y-auto">
+        <div className="p-2.5 md:p-3 flex-1 overflow-y-auto custom-scrollbar">
           <FormPanel
             data={data}
             set={set}
