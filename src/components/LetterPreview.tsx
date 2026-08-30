@@ -184,10 +184,7 @@ export default function LetterPreview({ data }: LetterPreviewProps) {
                 <div>Tanggal Jatuh Tempo</div><div>:</div><div className="uppercase">{data.customerDueDate}</div>
               </div>
               <div className="grid grid-cols-[200px_10px_1fr]">
-                <div>Informasi Angsuran</div><div>:</div><div>{data.customerInstallment}</div>
-              </div>
-              <div className="grid grid-cols-[200px_10px_1fr]">
-                <div>Jumlah Angsuran belum bayar</div><div>:</div><div>{data.customerUnpaidInstallmentCount}</div>
+                <div>Angsuran / Total Angsuran</div><div>:</div><div>{data.customerInstallment}</div>
               </div>
               <div className="grid grid-cols-[200px_10px_1fr]">
                 <div>DENDA</div><div>:</div><div>{data.customerPenalty}</div>

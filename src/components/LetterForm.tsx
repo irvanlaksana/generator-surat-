@@ -231,15 +231,9 @@ export default function LetterForm({ data, onChange }: LetterFormProps) {
               <input type="text" name="customerPenalty" value={data.customerPenalty} onChange={handleChange} className={inputClass} />
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className={labelClass}>Informasi Angsuran</label>
-              <input type="text" name="customerInstallment" value={data.customerInstallment} onChange={handleChange} className={inputClass} placeholder="Rp. 385.000 (Angsuran ke 8 s/d 18)" />
-            </div>
-            <div>
-              <label className={labelClass}>Jumlah Angsuran Belum Bayar</label>
-              <input type="text" name="customerUnpaidInstallmentCount" value={data.customerUnpaidInstallmentCount} onChange={handleChange} className={inputClass} placeholder="10 Bulan" />
-            </div>
+          <div>
+            <label className={labelClass}>Angsuran / Total Angsuran</label>
+            <input type="text" name="customerInstallment" value={data.customerInstallment} onChange={handleChange} className={inputClass} placeholder="Rp. 385.000 (Angsuran ke 8 s/d 18)" />
           </div>
         </div>
       </section>

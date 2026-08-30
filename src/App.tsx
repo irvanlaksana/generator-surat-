@@ -1,9 +1,12 @@
 import React, { useState } from 'react';
 import LetterForm from './components/LetterForm';
 import LetterPreview from './components/LetterPreview';
+import BastGenerator from './components/BastGenerator';
 import { LetterData } from './types';
-import { FileText } from 'lucide-react';
+import { FileText, ClipboardCheck, Sparkles } from 'lucide-react';
 import { generateLetterNumber } from './utils/letterNumber';
+
+type DocumentType = 'surat_tugas' | 'bast';
 
 const initialData: LetterData = {
   kopImage: null,
@@ -36,50 +39,113 @@ const initialData: LetterData = {
 };
 
 export default function App() {
+  const [docType, setDocType] = useState<DocumentType>('surat_tugas');
   const [data, setData] = useState<LetterData>(initialData);
   const [activeTab, setActiveTab] = useState<'form' | 'preview'>('form');
 
   return (
     <div className="min-h-screen flex flex-col bg-[#F5F5F0] font-sans text-[#4A4A4A]">
-      <header className="bg-[#EBEBE4] border-b border-[#D1D1CA] px-6 py-4 flex items-center gap-3 print:hidden shadow-sm z-10">
-        <div className="bg-[#5A5A40] p-2 rounded-lg text-white">
-          <FileText size={24} />
-        </div>
-        <div>
-          <h1 className="text-xl font-bold tracking-tight text-[#2C2C24]">Surat Tugas Generator</h1>
-          <p className="text-xs text-[#8A8A7A]">Sistem Pembuat Surat Tugas Penagihan</p>
-        </div>
-      </header>
-
-      {/* Mobile Tabs */}
-      <div className="lg:hidden flex bg-[#EBEBE4] border-b border-[#D1D1CA] print:hidden">
-        <button
-          onClick={() => setActiveTab('form')}
-          className={`flex-1 py-3 text-sm font-medium transition-colors ${activeTab === 'form' ? 'text-[#5A5A40] border-b-2 border-[#5A5A40]' : 'text-[#8A8A7A] hover:text-[#4A4A4A]'}`}
-        >
-          Isi Data
-        </button>
-        <button
-          onClick={() => setActiveTab('preview')}
-          className={`flex-1 py-3 text-sm font-medium transition-colors ${activeTab === 'preview' ? 'text-[#5A5A40] border-b-2 border-[#5A5A40]' : 'text-[#8A8A7A] hover:text-[#4A4A4A]'}`}
-        >
-          Pratinjau Surat
-        </button>
-      </div>
-
-      <main className="flex-1 flex overflow-hidden">
-        {/* Form Panel */}
-        <div className={`w-full lg:w-[450px] xl:w-[500px] border-r border-[#D1D1CA] bg-[#EBEBE4] flex-col overflow-hidden ${activeTab === 'form' ? 'flex' : 'hidden lg:flex'} print:hidden`}>
-          <div className="flex-1 overflow-y-auto p-4 md:p-6 custom-scrollbar">
-            <LetterForm data={data} onChange={setData} />
+      <header className="bg-[#EBEBE4] border-b border-[#D1D1CA] px-4 md:px-6 py-3 flex flex-wrap items-center justify-between gap-3 print:hidden shadow-xs z-10">
+        <div className="flex items-center gap-3">
+          <div className="bg-[#5A5A40] p-2 rounded-lg text-white shadow-xs">
+            {docType === 'surat_tugas' ? <FileText size={22} /> : <ClipboardCheck size={22} />}
+          </div>
+          <div>
+            <h1 className="text-lg md:text-xl font-bold tracking-tight text-[#2C2C24]">
+              {docType === 'surat_tugas' ? 'Surat Tugas Penagihan' : 'BAST Kendaraan Bermotor'}
+            </h1>
+            <p className="text-xs text-[#8A8A7A]">
+              {docType === 'surat_tugas'
+                ? 'Sistem Pembuat Surat Tugas Eksekusi Penagihan'
+                : 'Berita Acara Serah Terima & Surat Penyerahan Unit'}
+            </p>
           </div>
         </div>
 
-        {/* Preview Panel */}
-        <div className={`flex-1 flex-col overflow-hidden bg-[#FDFBF7] ${activeTab === 'preview' ? 'flex' : 'hidden lg:flex'} print:block print:bg-white`}>
-          <LetterPreview data={data} />
+        {/* Document Template Selector */}
+        <div className="flex items-center gap-1.5 bg-white p-1 rounded-xl border border-[#D1D1CA] shadow-xs">
+          <button
+            type="button"
+            id="tab-surat-tugas"
+            onClick={() => setDocType('surat_tugas')}
+            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+              docType === 'surat_tugas'
+                ? 'bg-[#5A5A40] text-white shadow-xs'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+            }`}
+          >
+            <FileText size={14} />
+            Surat Tugas
+          </button>
+          <button
+            type="button"
+            id="tab-bast"
+            onClick={() => setDocType('bast')}
+            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+              docType === 'bast'
+                ? 'bg-[#5A5A40] text-white shadow-xs'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+            }`}
+          >
+            <ClipboardCheck size={14} />
+            Template BAST
+          </button>
         </div>
-      </main>
+      </header>
+
+      {/* Main Content Area */}
+      {docType === 'bast' ? (
+        <BastGenerator />
+      ) : (
+        <>
+          {/* Mobile Tabs for Surat Tugas */}
+          <div className="lg:hidden flex bg-[#EBEBE4] border-b border-[#D1D1CA] print:hidden">
+            <button
+              onClick={() => setActiveTab('form')}
+              className={`flex-1 py-3 text-sm font-medium transition-colors ${
+                activeTab === 'form'
+                  ? 'text-[#5A5A40] border-b-2 border-[#5A5A40] bg-white/50'
+                  : 'text-[#8A8A7A] hover:text-[#4A4A4A]'
+              }`}
+            >
+              Isi Data
+            </button>
+            <button
+              onClick={() => setActiveTab('preview')}
+              className={`flex-1 py-3 text-sm font-medium transition-colors ${
+                activeTab === 'preview'
+                  ? 'text-[#5A5A40] border-b-2 border-[#5A5A40] bg-white/50'
+                  : 'text-[#8A8A7A] hover:text-[#4A4A4A]'
+              }`}
+            >
+              Pratinjau Surat
+            </button>
+          </div>
+
+          <main className="flex-1 flex overflow-hidden">
+            {/* Form Panel */}
+            <div
+              className={`w-full lg:w-[450px] xl:w-[500px] border-r border-[#D1D1CA] bg-[#EBEBE4] flex-col overflow-hidden ${
+                activeTab === 'form' ? 'flex' : 'hidden lg:flex'
+              } print:hidden`}
+            >
+              <div className="flex-1 overflow-y-auto p-4 md:p-6 custom-scrollbar">
+                <LetterForm data={data} onChange={setData} />
+              </div>
+            </div>
+
+            {/* Preview Panel */}
+            <div
+              className={`flex-1 flex-col overflow-hidden bg-[#FDFBF7] ${
+                activeTab === 'preview' ? 'flex' : 'hidden lg:flex'
+              } print:block print:bg-white`}
+            >
+              <LetterPreview data={data} />
+            </div>
+          </main>
+        </>
+      )}
     </div>
   );
 }
+
