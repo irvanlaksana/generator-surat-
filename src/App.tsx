@@ -13,14 +13,31 @@ import { cx } from './components/ui';
 const STORAGE_KEY = 'generator-surat-v2';
 const PAGES_KEY = 'generator-surat-v2:pages';
 
+/** Kunci penyimpanan versi lama (form masih dipisah per dokumen) */
+const LEGACY_KEYS = ['generator-surat-v1', 'bast-generator-v1'];
+
 function loadStoredData(): DocData {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return DEFAULT_DATA;
-    return normalizeStored(JSON.parse(raw) as unknown);
+    if (raw) return normalizeStored(JSON.parse(raw) as unknown);
+
+    // Pulihkan isian dari versi lama ke model tunggal agar data user tidak hilang
+    for (const key of LEGACY_KEYS) {
+      const legacyRaw = localStorage.getItem(key);
+      if (!legacyRaw) continue;
+      const migrated = normalizeStored(JSON.parse(legacyRaw) as unknown);
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(migrated));
+        localStorage.removeItem(key);
+      } catch {
+        /* penyimpanan penuh: biarkan data lama tetap ada */
+      }
+      return migrated;
+    }
   } catch {
-    return DEFAULT_DATA;
+    /* data rusak: mulai dari contoh data */
   }
+  return DEFAULT_DATA;
 }
 
 function loadStoredPages(): PageKey[] {
