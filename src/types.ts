@@ -1,38 +1,8 @@
-export interface AttachmentData {
-  url: string;
-  width: number;
-  height: number;
-}
-
-export interface LetterData {
-  kopImage: string | null;
-  kopImageHeight: number;
-  kopImageFit: 'contain' | 'fill' | 'cover';
-  kopImageAlign: 'left' | 'center' | 'right';
-  kopImageOffsetY: number;
-  kopImageMarginBottom: number;
-  kopCompanyName: string;
-  letterNumber: string;
-  assignerName: string;
-  assignerPosition: string;
-  assigneeName: string;
-  assigneeNIK: string;
-  assigneePosition: string;
-  clientName: string;
-  customerContract: string;
-  customerName: string;
-  customerAddress: string;
-  customerDueDate: string;
-  customerInstallment: string;
-  customerPenalty: string;
-  customerUnpaidInstallmentCount: string;
-  attachments: AttachmentData[];
-  vehicleBrand: string;
-  vehiclePlate: string;
-  validFrom: string;
-  validTo: string;
-  signPlaceDate: string;
-}
+/**
+ * Model data tunggal (satu urutan formulir) untuk seluruh dokumen:
+ * Surat Tugas, Surat Penyerahan, BAST, dan Lampiran berkas.
+ * Tidak ada pemisahan form antar jenis dokumen.
+ */
 
 export type VehicleType = 'roda2' | 'roda4';
 
@@ -45,30 +15,79 @@ export interface ChecklistItemValue {
 
 export type ChecklistMap = Record<string, ChecklistItemValue>;
 
-export interface BastData {
-  jenis: VehicleType;
+/** Kategori berkas yang diunggah (KTP, STNK, BPKB, foto unit, lainnya) */
+export type DocCategoryId = 'ktp' | 'stnk' | 'bpkb' | 'unit' | 'lainnya';
+
+export interface UploadedDoc {
+  id: string;
+  kategori: DocCategoryId;
+  label: string;
+  fileName: string;
+  url: string;
+  size: number;
+  width: number;
+  height: number;
+}
+
+export type KopFit = 'contain' | 'fill' | 'cover';
+export type KopAlign = 'left' | 'center' | 'right';
+
+/** Halaman yang bisa diekspor / ditampilkan (satu rangkaian dokumen) */
+export type PageKey = 'surat_tugas' | 'penyerahan' | 'bast' | 'lampiran';
+
+export interface DocData {
+  /* 1. Perusahaan & Kop Surat */
+  namaPerusahaan: string;
+  cabang: string;
+  alamatPerusahaan: string;
+  teleponPerusahaan: string;
+  kopImage: string | null;
+  kopImageHeight: number;
+  kopImageFit: KopFit;
+  kopImageAlign: KopAlign;
+  kopOffsetY: number;
+  kopMarginBottom: number;
+
+  /* 2. Kreditur (multifinance / leasing) */
+  namaKreditur: string;
+  inisialKreditur: string;
+
+  /* 3. Debitur / Nasabah */
+  namaDebitur: string;
+  nikDebitur: string;
+  alamatDebitur: string;
+  kecamatan: string;
+  kabupaten: string;
+  hpDebitur: string;
+  nomorKontrak: string;
+
+  /* 4. Nomor surat & tanggal */
+  nomorSuratTugas: string;
   nomorBast: string;
   nomorPenyerahan: string;
-  perusahaan: string;
-  cabang: string;
-  alamat: string;
-  telepon: string;
-  
-  // Data Petugas / Pihak Pertama (Penerima)
-  petugasNama: string;
-  petugasNik: string;
-  petugasJabatan: string;
-  petugasHp: string;
+  tanggalSurat: string; // ISO yyyy-mm-dd
+  masaBerlakuMulai: string; // ISO yyyy-mm-dd
+  masaBerlakuSampai: string; // ISO yyyy-mm-dd
+  tempatTanggalTtd: string;
 
-  // Data Debitur / Pihak Kedua (Pemberi / Yang Menyerahkan)
-  debiturNama: string;
-  debiturNik: string;
-  debiturAlamat: string;
-  debiturHp: string;
-  nomorKontrak: string;
-  krediturLeasing: string;
+  /* 5. Angsuran & tunggakan */
+  nomorAngsuran: string;
+  nilaiAngsuran: string;
+  jatuhTempo: string; // ISO yyyy-mm-dd
+  totalTunggakan: string;
+  denda: string;
+  keteranganAngsuran: string;
 
-  // Data Kendaraan
+  /* 6. Petugas lapangan */
+  namaPemberiTugas: string;
+  jabatanPemberiTugas: string;
+  namaPetugas: string;
+  nikPetugas: string;
+  jabatanPetugas: string;
+  hpPetugas: string;
+
+  /* 7. Kendaraan */
+  jenis: VehicleType;
   kendaraanMerk: string;
   kendaraanType: string;
   kendaraanTahun: string;
@@ -76,27 +95,54 @@ export interface BastData {
   kendaraanNoPol: string;
   kendaraanNoRangka: string;
   kendaraanNoMesin: string;
-  kendaraanBpkb: string;
-  kendaraanStnk: string;
   kendaraanOdometer: string;
   kendaraanBahanBakar: string;
+  kendaraanStnk: string;
+  kendaraanBpkb: string;
   kendaraanKondisiMesin: string;
   kendaraanKondisiBodi: string;
 
-  // Checklist komponen
+  /* 8. Berkas pendukung (KTP, STNK, BPKB, unit, lainnya) */
+  dokumen: UploadedDoc[];
+
+  /* 9. Checklist kondisi unit */
   checklist: ChecklistMap;
 
-  // Lokasi & Tanggal
+  /* 10. Tempat, tanggal, saksi & catatan */
   kota: string;
-  tanggal: string;
-
-  // Saksi-Saksi
+  tanggalPenyerahan: string; // ISO yyyy-mm-dd
   saksi1Nama: string;
   saksi1Jabatan: string;
   saksi2Nama: string;
   saksi2Jabatan: string;
-
-  // Catatan Tambahan
   catatanKhusus: string;
 }
 
+export type DocDataKey = keyof DocData;
+
+/** Kunci field bertipe string / number, agar setter form tetap type-safe */
+export type StringDataKey = { [K in keyof DocData]-?: DocData[K] extends string ? K : never }[keyof DocData];
+export type NumberDataKey = { [K in keyof DocData]-?: DocData[K] extends number ? K : never }[keyof DocData];
+
+/** Konfigurasi kategori berkas pendukung pada form unggah */
+export interface DocCategoryConfig {
+  id: DocCategoryId;
+  label: string;
+  hint: string;
+  icon: string;
+  maxFiles: number;
+  required: boolean;
+}
+
+/** Bentuk data lama (sebelum form digabung) untuk keperluan migrasi */
+export type BastDataLegacy = Record<string, unknown>;
+
+/** Hasil validasi satu field */
+export type IssueLevel = 'error' | 'warning';
+
+export interface ValidationIssue {
+  field: string;
+  label: string;
+  message: string;
+  level: IssueLevel;
+}
