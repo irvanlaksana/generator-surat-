@@ -1,142 +1,140 @@
-import { parseIso, ROMAN_MONTHS, todayIso, normalizeText } from './format';
-
-/**
- * Pembuat nomor surat resmi.
- * Format: [NoUrut]/[Jenis]/[Inisial Perusahaan]/[Tanggal]/[Bulan Romawi]/[Tahun]
- * Contoh  : 001/ST/MJI/21/VIII/2026
- */
-
-const COMPANY_ALIASES: Array<[string, string]> = [
-  ['MITRA JASATRIA INDONESIA', 'MJI'],
-  ['ANUGRAH MEGA MANDIRI', 'KAMM'],
-  ['OTO MULTIARTHA', 'OTO'],
-  ['FEDERAL INTERNATIONAL FINANCE', 'FIF'],
-  ['FIF GROUP', 'FIF'],
-  ['BUSSAN AUTO FINANCE', 'BAF'],
-  ['ADIRA DINAMIK', 'ADIRA'],
-  ['WOM FINANCE', 'WOM'],
-  ['KREDIT PLUS', 'KBKP'],
-  ['KB FINANSIA', 'KBKP'],
-  ['INDOMARFIN', 'IMF'],
-  ['MEGA FINANCE', 'MEGA'],
-  ['FIFASTEL', 'FIFASTEL'],
-  ['BFI FINANCE', 'BFI'],
-  ['CLIPAN SECURITIES FINANCE', 'CSF'],
-  ['HOME CREDIT', 'HC'],
+const ROMAN_MONTHS = [
+  'I', 'II', 'III', 'IV', 'V', 'VI',
+  'VII', 'VIII', 'IX', 'X', 'XI', 'XII'
 ];
 
-const IGNORED_WORDS = new Set(['PT', 'CV', 'UD', 'PD', 'PERUM', 'PERSERO', 'Tbk', 'dan', 'the']);
+export function getRomanMonth(monthIndex: number): string {
+  return ROMAN_MONTHS[monthIndex] || 'I';
+}
 
 export function extractCompanyInitials(companyName?: string): string {
-  const clean = normalizeText(companyName || '');
-  if (!clean) return 'MJI';
-
-  // Sudah berupa singkatan pendek (MJI, KAMM, BAF, FIF, WOM, ACC)
-  if (/^[A-Z0-9]{2,6}$/.test(clean.replace(/[. ]/g, ''))) {
-    return clean.replace(/[^A-Za-z0-9]/g, '').toUpperCase();
+  if (!companyName || !companyName.trim()) return 'MJI';
+  
+  const clean = companyName.trim();
+  
+  // If already short uppercase abbreviation (e.g. MJI, KAMM, BAF, FIF, ACC, WOM)
+  if (/^[A-Z0-9]{2,6}$/i.test(clean)) {
+    return clean.toUpperCase();
   }
 
-  // Ambil dari dalam tanda kurung: "Koperasi ... (KAMM)" -> KAMM
-  const inBracket = clean.match(/\(([A-Za-z0-9]{2,8})\)/);
-  if (inBracket) return inBracket[1].toUpperCase();
+  // Remove common company prefixes
+  const withoutPrefix = clean
+    .replace(/^(PT\.?|CV\.?|KOPERASI|KOP\.?|UD\.?|PERUM\.?|PERSERO\.?)\s+/gi, '')
+    .trim();
 
-  const withoutPrefix = clean.replace(/^(PT\.?|CV\.?|UD\.?|PD\.?|PERUM\.?|KOPERASI|KOP\.?|PERSERO\.?)\s+/gi, '').trim();
+  // Known standard mappings
   const upper = withoutPrefix.toUpperCase();
+  if (upper.includes('MITRA JASATRIA INDONESIA')) return 'MJI';
+  if (upper.includes('ANUGRAH MEGA MANDIRI')) return 'KAMM';
+  if (upper.includes('OTO MULTIARTHA')) return 'OTO';
+  if (upper.includes('FEDERAL INTERNATIONAL FINANCE') || upper.includes('FIF GROUP')) return 'FIF';
+  if (upper.includes('BUSSAN AUTO FINANCE')) return 'BAF';
+  if (upper.includes('ADIRA')) return 'ADIRA';
+  if (upper.includes('WOM FINANCE')) return 'WOM';
+  if (upper.includes('KREDIT PLUS') || upper.includes('KB FINANSIA')) return 'KB-KP';
 
-  for (const [needle, code] of COMPANY_ALIASES) {
-    if (upper.includes(needle)) return code;
-  }
-
-  const words = withoutPrefix
-    .replace(/\(([^)]*)\)/g, '$1')
-    .split(/[\s,.\-/]+/)
-    .filter((w) => w.length > 1 && !IGNORED_WORDS.has(w));
-
+  // Extract acronym from words (length > 1)
+  const words = withoutPrefix.split(/[\s,.-]+/).filter((w) => w.length > 1);
   if (words.length >= 2) {
     const acronym = words.map((w) => w[0].toUpperCase()).join('');
-    if (acronym.length >= 2 && acronym.length <= 6) return acronym;
+    if (acronym.length >= 2 && acronym.length <= 5) {
+      return acronym;
+    }
   }
 
-  return withoutPrefix.replace(/[^A-Za-z0-9]/g, '').slice(0, 4).toUpperCase() || 'MJI';
+  // Fallback: take first 3-4 letters
+  return withoutPrefix.replace(/[^a-zA-Z0-9]/g, '').slice(0, 4).toUpperCase() || 'MJI';
 }
 
 /**
- * Nomor urut harian per jenis surat, disimpan di localStorage dengan kunci
- * tanggal sehingga 001, 002, 003 ... untuk surat yang dibuat pada hari yang sama.
+ * Gets or increments a daily sequence counter for specific letter type.
+ * Stored in localStorage by YYYY-MM-DD key so that consecutive generations
+ * within the same day get 001, 002, 003...
  */
-export function getNextDailySequence(letterType: string, dateKey = todayIso()): string {
+export function getNextDailySequence(letterType: string, date = new Date()): string {
   try {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const dateKey = `${year}-${month}-${day}`;
     const storageKey = `seq_${dateKey}_${letterType.toUpperCase().replace(/[^A-Z0-9]/g, '_')}`;
-    const current = Number.parseInt(localStorage.getItem(storageKey) || '0', 10);
-    const safe = Number.isFinite(current) && current >= 0 ? current : 0;
-    const next = safe + 1;
-    localStorage.setItem(storageKey, String(next));
-    return String(Math.min(next, 999)).padStart(3, '0');
+    
+    const current = parseInt(localStorage.getItem(storageKey) || '0', 10);
+    const next = current + 1;
+    localStorage.setItem(storageKey, next.toString());
+    
+    return String(next).padStart(3, '0');
   } catch {
-    return String(Math.floor(Math.random() * 900) + 100).padStart(3, '0');
+    const rand = Math.floor(Math.random() * 900) + 100;
+    return String(rand);
   }
 }
 
 export type OfficialLetterType = 'ST' | 'BAST' | 'SPK';
 
 export interface GenerateLetterNumberOptions {
-  type: OfficialLetterType;
+  type: OfficialLetterType | 'SURAT_TUGAS' | 'SURAT_BAST' | 'SURAT_PENYERAHAN';
   companyName?: string;
-  /** Date object, ISO string, atau dibiarkan kosong = hari ini */
   date?: Date | string;
   customSequence?: string | number;
-  /** Override inisial penerbit (mis. dari field Inisial Kreditur) */
-  companyInitial?: string;
-}
-
-function resolveDate(date?: Date | string): Date {
-  if (date instanceof Date && !Number.isNaN(date.getTime())) return date;
-  if (typeof date === 'string') {
-    const parsed = parseIso(date);
-    if (parsed) return parsed;
-  }
-  return new Date();
 }
 
 export function generateOfficialLetterNumber(options: GenerateLetterNumberOptions): string {
-  const d = resolveDate(options.date);
+  let d = new Date();
+  if (options.date) {
+    if (typeof options.date === 'string') {
+      const parsed = new Date(options.date);
+      if (!isNaN(parsed.getTime())) {
+        d = parsed;
+      }
+    } else {
+      d = options.date;
+    }
+  }
+
   const day = String(d.getDate()).padStart(2, '0');
-  const romanMonth = ROMAN_MONTHS[d.getMonth()] ?? 'I';
+  const romanMonth = getRomanMonth(d.getMonth());
   const year = d.getFullYear();
-  const companyInitials = normalizeText(options.companyInitial || '')
-    ? options.companyInitial!.replace(/[^A-Za-z0-9]/g, '').toUpperCase()
-    : extractCompanyInitials(options.companyName);
+  const companyInitials = extractCompanyInitials(options.companyName);
 
-  const seq = options.customSequence
+  let typeInitial = 'ST';
+  if (options.type === 'BAST' || options.type === 'SURAT_BAST') {
+    typeInitial = 'BAST';
+  } else if (options.type === 'SPK' || options.type === 'SURAT_PENYERAHAN') {
+    typeInitial = 'SPK';
+  } else {
+    typeInitial = 'ST';
+  }
+
+  const seq = options.customSequence 
     ? String(options.customSequence).padStart(3, '0')
-    : getNextDailySequence(options.type, todayIso(d));
+    : getNextDailySequence(typeInitial, d);
 
-  return `${seq}/${options.type}/${companyInitials}/${day}/${romanMonth}/${year}`;
+  // Format Resmi: [NO_URUT_HARIAN]/[INISIAL_SURAT]/[INISIAL_PERUSAHAAN]/[TANGGAL]/[BULAN_ROMAWI]/[TAHUN]
+  // Contoh: 001/ST/MJI/29/VIII/2026 atau 002/BAST/MJI/29/VIII/2026 atau 001/SPK/MJI/29/VIII/2026
+  return `${seq}/${typeInitial}/${companyInitials}/${day}/${romanMonth}/${year}`;
 }
 
-/**
- * Baca tanggal dari nomor surat resmi (001/ST/MJI/21/VIII/2026 -> 2026-08-21).
- * Dipakai saat migrasi data lama yang belum menyimpan tanggal terpisah.
- */
-export function dateFromLetterNumber(letterNumber?: string | null): string {
-  const match = normalizeText(letterNumber).match(/\/(?:\d{1,4}|[A-Z0-9]+)\/\d{1,2}\/([IVXLCDM]+)\/(\d{4})(?:\/|$)/i);
-  if (!match) return '';
-  const [, roman, year] = match;
-  const monthIndex = ROMAN_MONTHS.indexOf(roman.toUpperCase());
-  if (monthIndex < 0) return '';
-
-  const dayMatch = normalizeText(letterNumber).match(/\/\d{1,2}\/(?:[IVXLCDM]+\/\d{4})$/i);
-  const day = dayMatch ? Number(dayMatch[0].replace(/[^\d]/g, '')) : 1;
-  const date = new Date(Number(year), monthIndex, Number.isFinite(day) && day >= 1 && day <= 31 ? day : 1);
-  return Number.isNaN(date.getTime()) ? '' : todayIso(date);
+export function generateLetterNumber(date = new Date(), companyName = 'PT. MITRA JASATRIA INDONESIA'): string {
+  return generateOfficialLetterNumber({
+    type: 'ST',
+    companyName,
+    date,
+  });
 }
 
-/* Helper praktis */
-export const generateSuratTugasNumber = (companyName: string, date?: Date | string, companyInitial?: string) =>
-  generateOfficialLetterNumber({ type: 'ST', companyName, date, companyInitial });
+export function generateBastNumber(companyName = 'PT. MITRA JASATRIA INDONESIA', date = new Date()): string {
+  return generateOfficialLetterNumber({
+    type: 'BAST',
+    companyName,
+    date,
+  });
+}
 
-export const generateBastNumber = (companyName: string, date?: Date | string, companyInitial?: string) =>
-  generateOfficialLetterNumber({ type: 'BAST', companyName, date, companyInitial });
-
-export const generateSuratPenyerahanNumber = (companyName: string, date?: Date | string, companyInitial?: string) =>
-  generateOfficialLetterNumber({ type: 'SPK', companyName, date, companyInitial });
+export function generateSuratPenyerahanNumber(companyName = 'PT. MITRA JASATRIA INDONESIA', date = new Date()): string {
+  return generateOfficialLetterNumber({
+    type: 'SPK',
+    companyName,
+    date,
+  });
+}

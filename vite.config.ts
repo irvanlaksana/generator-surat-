@@ -12,10 +12,6 @@ export default defineConfig(() => {
       },
     },
     server: {
-      host: '0.0.0.0',
-      port: Number(process.env.PORT ?? 3000),
-      // Izinkan preview host Arena ({port}-{id}.e2b.app) supaya bisa dibuka dari browser
-      allowedHosts: ['.e2b.app', 'localhost', '127.0.0.1'],
       // HMR is disabled in AI Studio via DISABLE_HMR env var.
       // Do not modifyâfile watching is disabled to prevent flickering during agent edits.
       hmr: process.env.DISABLE_HMR !== 'true',
