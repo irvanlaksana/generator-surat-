@@ -29,7 +29,7 @@ const initialData: LetterData = {
   customerContract: '00730191',
   customerName: 'KISNO ANGKAH TRI HIDAYAT',
   customerAddress: 'KALIKABONG RT 004 RW 002, KALIMANAH',
-  customerDueDate: '2 FEBRUARI 2024',
+  customerDueDate: '2024-02-02',
   customerInstallment: 'Rp 385.000',
   customerTotalInstallment: 'Rp 4.235.000',
   customerUnpaidInstallmentCount: '10 Bulan',
@@ -37,8 +37,8 @@ const initialData: LetterData = {
   attachments: [],
   vehicleBrand: 'YAMAHA / VIXION',
   vehiclePlate: 'R4088YV',
-  validFrom: '21 Agustus 2026',
-  validTo: '31 Agustus 2026',
+  validFrom: '2026-08-21',
+  validTo: '2026-08-31',
   signPlaceDate: 'Purwokerto, 22 Agustus 2026'
 };
 

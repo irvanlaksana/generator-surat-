@@ -79,7 +79,7 @@ export default function LetterForm({ data, onChange }: LetterFormProps) {
     onChange({ ...data, attachments: newAttachments });
   };
 
-  const [activeCategory, setActiveCategory] = useState<'semua' | 'tugas' | 'nasabah' | 'kendaraan' | 'foto'>('semua');
+  const [activeCategory, setActiveCategory] = useState<'semua' | 'tugas' | 'nasabah' | 'kop'>('semua');
 
   const sectionClass = "bg-white p-3 rounded-xl border border-slate-200 shadow-2xs space-y-2.5";
   const headingClass = "text-xs font-bold text-slate-800 pb-1.5 border-b border-slate-100 uppercase tracking-wider flex items-center justify-between";
@@ -119,21 +119,12 @@ export default function LetterForm({ data, onChange }: LetterFormProps) {
         </button>
         <button
           type="button"
-          onClick={() => setActiveCategory('kendaraan')}
+          onClick={() => setActiveCategory('kop')}
           className={`flex-1 py-1 px-1.5 rounded-md transition-all cursor-pointer text-center ${
-            activeCategory === 'kendaraan' ? 'bg-white text-slate-900 shadow-xs font-bold' : 'text-slate-600 hover:text-slate-900'
+            activeCategory === 'kop' ? 'bg-white text-slate-900 shadow-xs font-bold' : 'text-slate-600 hover:text-slate-900'
           }`}
         >
-          Unit & Kop
-        </button>
-        <button
-          type="button"
-          onClick={() => setActiveCategory('foto')}
-          className={`flex-1 py-1 px-1.5 rounded-md transition-all cursor-pointer text-center ${
-            activeCategory === 'foto' ? 'bg-white text-slate-900 shadow-xs font-bold' : 'text-slate-600 hover:text-slate-900'
-          }`}
-        >
-          Lampiran
+          Kop Surat
         </button>
       </div>
 
@@ -242,11 +233,11 @@ export default function LetterForm({ data, onChange }: LetterFormProps) {
               <div className="grid grid-cols-2 gap-2">
                 <div>
                   <label className={labelClass}>Berlaku Mulai</label>
-                  <input type="text" name="validFrom" value={data.validFrom} onChange={handleChange} className={inputClass} />
+                  <input type="date" name="validFrom" value={data.validFrom} onChange={handleChange} className={inputClass} />
                 </div>
                 <div>
                   <label className={labelClass}>Berlaku Sampai</label>
-                  <input type="text" name="validTo" value={data.validTo} onChange={handleChange} className={inputClass} />
+                  <input type="date" name="validTo" value={data.validTo} onChange={handleChange} className={inputClass} />
                 </div>
               </div>
             </div>
@@ -273,15 +264,9 @@ export default function LetterForm({ data, onChange }: LetterFormProps) {
                 <label className={labelClass}>Alamat</label>
                 <textarea name="customerAddress" value={data.customerAddress} onChange={handleChange} rows={2} className={inputClass} />
               </div>
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className={labelClass}>Jatuh Tempo</label>
-                  <input type="text" name="customerDueDate" value={data.customerDueDate} onChange={handleChange} className={inputClass} />
-                </div>
-                <div>
-                  <label className={labelClass}>Keterangan Angsuran (Opsional)</label>
-                  <input type="text" name="customerUnpaidInstallmentCount" value={data.customerUnpaidInstallmentCount} onChange={handleChange} className={inputClass} placeholder="10 Bulan / Angsuran ke 8 s/d 18" />
-                </div>
+              <div>
+                <label className={labelClass}>Jatuh Tempo</label>
+                <input type="date" name="customerDueDate" value={data.customerDueDate} onChange={handleChange} className={inputClass} />
               </div>
               <div className="grid grid-cols-3 gap-2">
                 <div>
@@ -299,12 +284,7 @@ export default function LetterForm({ data, onChange }: LetterFormProps) {
               </div>
             </div>
           </section>
-        </>
-      )}
 
-      {/* 5. Data Kendaraan & Kop Surat */}
-      {(activeCategory === 'semua' || activeCategory === 'kendaraan') && (
-        <>
           <section className={sectionClass}>
             <h2 className={headingClass}>
               <span>Data Kendaraan</span>
@@ -321,6 +301,57 @@ export default function LetterForm({ data, onChange }: LetterFormProps) {
             </div>
           </section>
 
+          <section className={sectionClass}>
+            <h2 className={headingClass}>
+              <span>Lampiran Foto Dokumen</span>
+            </h2>
+            <div className="space-y-2">
+              <div>
+                <label className={labelClass}>Upload Foto (KTP, STNK, Unit, dll)</label>
+                <input 
+                  type="file" 
+                  accept="image/*" 
+                  multiple
+                  onChange={handleAttachmentUpload} 
+                  className="w-full text-xs text-slate-600 file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-[11px] file:font-bold file:bg-[#5A5A40] file:text-white hover:file:bg-[#484833] transition cursor-pointer" 
+                />
+              </div>
+              {(data.attachments && data.attachments.length > 0) && (
+                <div className="grid grid-cols-1 gap-2 mt-2">
+                  {data.attachments.map((att, idx) => (
+                    <div key={idx} className="relative border border-slate-200 p-2 rounded-lg bg-slate-50">
+                      <img src={att.url} alt={`Preview ${idx}`} className="w-full h-24 object-contain bg-white rounded border border-slate-200 mb-1.5" />
+                      
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="block text-[9px] font-bold text-slate-600">Lebar: {att.width}px</label>
+                          <input type="range" min="100" max="800" value={att.width} onChange={(e) => updateAttachmentDimension(idx, 'width', Number(e.target.value))} className="w-full accent-[#5A5A40]" />
+                        </div>
+                        <div>
+                          <label className="block text-[9px] font-bold text-slate-600">Tinggi: {att.height}px</label>
+                          <input type="range" min="100" max="800" value={att.height} onChange={(e) => updateAttachmentDimension(idx, 'height', Number(e.target.value))} className="w-full accent-[#5A5A40]" />
+                        </div>
+                      </div>
+
+                      <button 
+                        onClick={() => removeAttachment(idx)}
+                        className="absolute top-1.5 right-1.5 bg-rose-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-[10px] font-bold shadow hover:bg-rose-700 transition cursor-pointer"
+                        title="Hapus foto"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </section>
+        </>
+      )}
+
+      {/* 5. Kop Surat */}
+      {(activeCategory === 'semua' || activeCategory === 'kop') && (
+        <>
           <section className={sectionClass}>
             <h2 className={headingClass}>
               <span>Kop Surat & Perusahaan</span>
@@ -397,55 +428,6 @@ export default function LetterForm({ data, onChange }: LetterFormProps) {
             </div>
           </section>
         </>
-      )}
-
-      {/* 6. Lampiran Foto */}
-      {(activeCategory === 'semua' || activeCategory === 'foto') && (
-        <section className={sectionClass}>
-          <h2 className={headingClass}>
-            <span>Lampiran Foto Dokumen</span>
-          </h2>
-          <div className="space-y-2">
-            <div>
-              <label className={labelClass}>Upload Foto (KTP, STNK, Unit, dll)</label>
-              <input 
-                type="file" 
-                accept="image/*" 
-                multiple
-                onChange={handleAttachmentUpload} 
-                className="w-full text-xs text-slate-600 file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-[11px] file:font-bold file:bg-[#5A5A40] file:text-white hover:file:bg-[#484833] transition cursor-pointer" 
-              />
-            </div>
-            {(data.attachments && data.attachments.length > 0) && (
-              <div className="grid grid-cols-1 gap-2 mt-2">
-                {data.attachments.map((att, idx) => (
-                  <div key={idx} className="relative border border-slate-200 p-2 rounded-lg bg-slate-50">
-                    <img src={att.url} alt={`Preview ${idx}`} className="w-full h-24 object-contain bg-white rounded border border-slate-200 mb-1.5" />
-                    
-                    <div className="grid grid-cols-2 gap-2">
-                      <div>
-                        <label className="block text-[9px] font-bold text-slate-600">Lebar: {att.width}px</label>
-                        <input type="range" min="100" max="800" value={att.width} onChange={(e) => updateAttachmentDimension(idx, 'width', Number(e.target.value))} className="w-full accent-[#5A5A40]" />
-                      </div>
-                      <div>
-                        <label className="block text-[9px] font-bold text-slate-600">Tinggi: {att.height}px</label>
-                        <input type="range" min="100" max="800" value={att.height} onChange={(e) => updateAttachmentDimension(idx, 'height', Number(e.target.value))} className="w-full accent-[#5A5A40]" />
-                      </div>
-                    </div>
-
-                    <button 
-                      onClick={() => removeAttachment(idx)}
-                      className="absolute top-1.5 right-1.5 bg-rose-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-[10px] font-bold shadow hover:bg-rose-700 transition cursor-pointer"
-                      title="Hapus foto"
-                    >
-                      ✕
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </section>
       )}
     </div>
   );

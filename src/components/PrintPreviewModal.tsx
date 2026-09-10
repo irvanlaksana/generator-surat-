@@ -29,6 +29,7 @@ import SuratPenyerahan from './SuratPenyerahan';
 import BastSheet from './BastSheet';
 import jsPDF from 'jspdf';
 import { toJpeg } from 'html-to-image';
+import { formatDateID } from '../utils/dateFormatter';
 
 interface PrintPreviewModalProps {
   isOpen: boolean;
@@ -620,10 +621,10 @@ export default function PrintPreviewModal({
                           <div>Alamat</div><div>:</div><div className="uppercase">{letterData.customerAddress}</div>
                         </div>
                         <div className="grid grid-cols-[200px_10px_1fr]">
-                          <div>Tanggal Jatuh Tempo</div><div>:</div><div className="uppercase">{letterData.customerDueDate}</div>
+                          <div>Tanggal Jatuh Tempo</div><div>:</div><div className="uppercase">{formatDateID(letterData.customerDueDate)}</div>
                         </div>
                         <div className="grid grid-cols-[200px_10px_1fr]">
-                          <div>Angsuran</div><div>:</div><div>{letterData.customerInstallment} {letterData.customerUnpaidInstallmentCount ? `(${letterData.customerUnpaidInstallmentCount})` : ''}</div>
+                          <div>Angsuran</div><div>:</div><div>{letterData.customerInstallment}</div>
                         </div>
                         {letterData.customerTotalInstallment && (
                           <div className="grid grid-cols-[200px_10px_1fr]">
@@ -651,7 +652,7 @@ export default function PrintPreviewModal({
                       <div className="space-y-0 text-[10pt] leading-[1.35]">
                         <div className="text-center font-bold mt-4 mb-1.5 text-[10.5pt]">MASA BERLAKU SURAT TUGAS</div>
                         <p>
-                          Surat Tugas ini berlaku efektif terhitung sejak tanggal {letterData.validFrom} sampai dengan tanggal {letterData.validTo}. Apabila masa berlaku telah berakhir, Surat Tugas ini dinyatakan tidak berlaku lagi dan wajib diperpanjang melalui persetujuan Manajemen {letterData.kopCompanyName}.
+                          Surat Tugas ini berlaku efektif terhitung sejak tanggal {formatDateID(letterData.validFrom)} sampai dengan tanggal {formatDateID(letterData.validTo)}. Apabila masa berlaku telah berakhir, Surat Tugas ini dinyatakan tidak berlaku lagi dan wajib diperpanjang melalui persetujuan Manajemen {letterData.kopCompanyName}.
                         </p>
 
                         <div className="text-center font-bold mt-4 mb-1.5 text-[10.5pt]">WEWENANG DAN TANGGUNG JAWAB PETUGAS</div>

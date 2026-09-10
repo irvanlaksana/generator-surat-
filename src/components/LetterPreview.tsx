@@ -3,6 +3,7 @@ import { LetterData, PaperSize, PAPER_SIZES } from '../types';
 import { FileDown, Loader2, UploadCloud, Printer, Eye, ChevronDown } from 'lucide-react';
 import jsPDF from 'jspdf';
 import { toJpeg } from 'html-to-image';
+import { formatDateID } from '../utils/dateFormatter';
 
 interface LetterPreviewProps {
   data: LetterData;
@@ -266,10 +267,10 @@ export default function LetterPreview({
                 <div>Alamat</div><div>:</div><div className="uppercase">{data.customerAddress}</div>
               </div>
               <div className="grid grid-cols-[200px_10px_1fr]">
-                <div>Tanggal Jatuh Tempo</div><div>:</div><div className="uppercase">{data.customerDueDate}</div>
+                <div>Tanggal Jatuh Tempo</div><div>:</div><div className="uppercase">{formatDateID(data.customerDueDate)}</div>
               </div>
               <div className="grid grid-cols-[200px_10px_1fr]">
-                <div>Angsuran</div><div>:</div><div>{data.customerInstallment} {data.customerUnpaidInstallmentCount ? `(${data.customerUnpaidInstallmentCount})` : ''}</div>
+                <div>Angsuran</div><div>:</div><div>{data.customerInstallment}</div>
               </div>
               {data.customerTotalInstallment && (
                 <div className="grid grid-cols-[200px_10px_1fr]">
@@ -298,7 +299,7 @@ export default function LetterPreview({
             <div className="space-y-0 text-[10pt] leading-[1.35]">
               <div className="text-center font-bold mt-4 mb-1.5 text-[10.5pt]">MASA BERLAKU SURAT TUGAS</div>
               <p>
-                Surat Tugas ini berlaku efektif terhitung sejak tanggal {data.validFrom} sampai dengan tanggal {data.validTo}. Apabila masa berlaku telah berakhir, Surat Tugas ini dinyatakan tidak berlaku lagi dan wajib diperpanjang melalui persetujuan Manajemen {data.kopCompanyName}.
+                Surat Tugas ini berlaku efektif terhitung sejak tanggal {formatDateID(data.validFrom)} sampai dengan tanggal {formatDateID(data.validTo)}. Apabila masa berlaku telah berakhir, Surat Tugas ini dinyatakan tidak berlaku lagi dan wajib diperpanjang melalui persetujuan Manajemen {data.kopCompanyName}.
               </p>
 
               <div className="text-center font-bold mt-4 mb-1.5 text-[10.5pt]">WEWENANG DAN TANGGUNG JAWAB PETUGAS</div>
