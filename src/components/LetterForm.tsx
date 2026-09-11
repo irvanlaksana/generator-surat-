@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { LetterData } from '../types';
 import { generateOfficialLetterNumber } from '../utils/letterNumber';
-import { Sparkles } from 'lucide-react';
+import { Sparkles, Lock } from 'lucide-react';
+import { KOP_IMAGE_FIX } from '../data/kopSurat';
 
 interface LetterFormProps {
   data: LetterData;
@@ -17,6 +18,8 @@ export default function LetterForm({ data, onChange }: LetterFormProps) {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
+    // KOP SURAT FIX: semua field kop dikunci, tidak bisa diubah dari form
+    if (name.startsWith('kop')) return;
     let parsedValue: string | number = (type === 'range' || type === 'number') ? Number(value) : value;
     
     if (name === 'customerInstallment' || name === 'customerTotalInstallment' || name === 'customerPenalty') {
@@ -34,17 +37,6 @@ export default function LetterForm({ data, onChange }: LetterFormProps) {
         companyName: data.kopCompanyName,
       }),
     });
-  };
-
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        onChange({ ...data, kopImage: reader.result as string });
-      };
-      reader.readAsDataURL(file);
-    }
   };
 
   const handleAttachmentUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -349,85 +341,27 @@ export default function LetterForm({ data, onChange }: LetterFormProps) {
         </>
       )}
 
-      {/* 5. Kop Surat */}
+      {/* 5. Kop Surat (FIX — TERKUNCI) */}
       {(activeCategory === 'semua' || activeCategory === 'kop') && (
-        <>
-          <section className={sectionClass}>
-            <h2 className={headingClass}>
-              <span>Kop Surat & Perusahaan</span>
-            </h2>
-            <div className="space-y-2">
-              <div>
-                <label className={labelClass}>Nama Perusahaan (Teks Surat)</label>
-                <input type="text" name="kopCompanyName" value={data.kopCompanyName} onChange={handleChange} className={inputClass} />
-              </div>
-              <div>
-                <label className={labelClass}>Upload Gambar Kop</label>
-                <input 
-                  type="file" 
-                  accept="image/*" 
-                  onChange={handleImageUpload} 
-                  className="w-full text-xs text-slate-600 file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-[11px] file:font-bold file:bg-[#5A5A40] file:text-white hover:file:bg-[#484833] transition cursor-pointer" 
-                />
-                {data.kopImage && (
-                  <div className="mt-2 space-y-2 p-2 bg-slate-50 rounded-lg border border-slate-200">
-                    <div className="flex items-center justify-between border-b border-slate-200 pb-1">
-                      <span className="text-[10px] font-bold text-slate-700">Pengaturan Kop</span>
-                      <button
-                        type="button"
-                        onClick={() => onChange({ ...data, kopImage: null })}
-                        className="text-[10px] text-rose-600 font-bold hover:underline cursor-pointer"
-                      >
-                        Hapus Kop
-                      </button>
-                    </div>
-                    
-                    <div className="grid grid-cols-2 gap-2">
-                      <div>
-                        <label className="block text-[9.5px] font-bold text-slate-600">Geser Kiri/Kanan: {data.kopImageOffsetX}px</label>
-                        <input type="range" min="-150" max="150" name="kopImageOffsetX" value={data.kopImageOffsetX} onChange={handleChange} className="w-full accent-[#5A5A40]" />
-                      </div>
-                      <div>
-                        <label className="block text-[9.5px] font-bold text-slate-600">Geser Atas/Bawah: {data.kopImageOffsetY}px</label>
-                        <input type="range" min="-150" max="150" name="kopImageOffsetY" value={data.kopImageOffsetY} onChange={handleChange} className="w-full accent-[#5A5A40]" />
-                      </div>
-                    </div>
-                    
-                    <div className="grid grid-cols-2 gap-2">
-                      <div>
-                        <label className="block text-[9.5px] font-bold text-slate-600">Tinggi: {data.kopImageHeight}px</label>
-                        <input type="range" min="50" max="300" name="kopImageHeight" value={data.kopImageHeight} onChange={handleChange} className="w-full accent-[#5A5A40]" />
-                      </div>
-                      <div>
-                        <label className="block text-[9.5px] font-bold text-slate-600">Jarak Bawah (Spasi): {data.kopImageMarginBottom}px</label>
-                        <input type="range" min="-100" max="150" name="kopImageMarginBottom" value={data.kopImageMarginBottom} onChange={handleChange} className="w-full accent-[#5A5A40]" />
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-2">
-                      <div>
-                        <label className="block text-[9.5px] font-bold text-slate-600">Skala</label>
-                        <select name="kopImageFit" value={data.kopImageFit} onChange={handleChange} className={inputClass + " text-[11px] py-1"}>
-                          <option value="contain">Contain</option>
-                          <option value="fill">Fill</option>
-                          <option value="cover">Cover</option>
-                        </select>
-                      </div>
-                      <div>
-                        <label className="block text-[9.5px] font-bold text-slate-600">Posisi</label>
-                        <select name="kopImageAlign" value={data.kopImageAlign} onChange={handleChange} className={inputClass + " text-[11px] py-1"}>
-                          <option value="center">Tengah</option>
-                          <option value="left">Kiri</option>
-                          <option value="right">Kanan</option>
-                        </select>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          </section>
-        </>
+        <section className={sectionClass}>
+          <h2 className={headingClass}>
+            <span>Kop Surat &amp; Perusahaan</span>
+            <span className="flex items-center gap-1 text-[9px] font-bold text-slate-400 normal-case tracking-normal">
+              <Lock size={10} /> FIX — Terkunci
+            </span>
+          </h2>
+          <div className="rounded-lg border border-slate-200 bg-white p-2">
+            <img src={KOP_IMAGE_FIX} alt="Kop surat resmi" className="w-full h-auto" />
+          </div>
+          <div className="flex items-start gap-1.5 text-[10px] text-slate-500 leading-snug">
+            <Lock size={11} className="mt-0.5 shrink-0 text-[#5A5A40]" />
+            <span>
+              Kop surat <strong>dikunci (fix)</strong> dan tidak dapat diganti dari form maupun payload
+              otomatis. Untuk mengganti kop resmi, edit file{' '}
+              <code className="text-[#5A5A40] font-bold">src/data/kopSurat.ts</code>.
+            </span>
+          </div>
+        </section>
       )}
     </div>
   );

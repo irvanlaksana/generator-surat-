@@ -46,6 +46,13 @@ export function extractCompanyInitials(companyName?: string): string {
   return withoutPrefix.replace(/[^a-zA-Z0-9]/g, '').slice(0, 4).toUpperCase() || 'MJI';
 }
 
+function dailySequenceKey(letterType: string, date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `seq_${year}-${month}-${day}_${letterType.toUpperCase().replace(/[^A-Z0-9]/g, '_')}`;
+}
+
 /**
  * Gets or increments a daily sequence counter for specific letter type.
  * Stored in localStorage by YYYY-MM-DD key so that consecutive generations
@@ -53,20 +60,27 @@ export function extractCompanyInitials(companyName?: string): string {
  */
 export function getNextDailySequence(letterType: string, date = new Date()): string {
   try {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    const dateKey = `${year}-${month}-${day}`;
-    const storageKey = `seq_${dateKey}_${letterType.toUpperCase().replace(/[^A-Z0-9]/g, '_')}`;
-    
-    const current = parseInt(localStorage.getItem(storageKey) || '0', 10);
+    const current = parseInt(localStorage.getItem(dailySequenceKey(letterType, date)) || '0', 10);
     const next = current + 1;
-    localStorage.setItem(storageKey, next.toString());
+    localStorage.setItem(dailySequenceKey(letterType, date), next.toString());
     
     return String(next).padStart(3, '0');
   } catch {
     const rand = Math.floor(Math.random() * 900) + 100;
     return String(rand);
+  }
+}
+
+/**
+ * Preview nomor urut berikutnya TANPA menambah counter
+ * (dipakai untuk pratinjau payload otomatis sebelum diterapkan).
+ */
+export function peekNextDailySequence(letterType: string, date = new Date()): string {
+  try {
+    const current = parseInt(localStorage.getItem(dailySequenceKey(letterType, date)) || '0', 10);
+    return String(current + 1).padStart(3, '0');
+  } catch {
+    return '001';
   }
 }
 
@@ -79,40 +93,57 @@ export interface GenerateLetterNumberOptions {
   customSequence?: string | number;
 }
 
-export function generateOfficialLetterNumber(options: GenerateLetterNumberOptions): string {
+function resolveDate(date?: Date | string): Date {
   let d = new Date();
-  if (options.date) {
-    if (typeof options.date === 'string') {
-      const parsed = new Date(options.date);
+  if (date) {
+    if (typeof date === 'string') {
+      const parsed = new Date(date);
       if (!isNaN(parsed.getTime())) {
         d = parsed;
       }
     } else {
-      d = options.date;
+      d = date;
     }
   }
+  return d;
+}
 
+function resolveTypeInitial(type: GenerateLetterNumberOptions['type']): string {
+  if (type === 'BAST' || type === 'SURAT_BAST') return 'BAST';
+  if (type === 'SPK' || type === 'SURAT_PENYERAHAN') return 'SPK';
+  return 'ST';
+}
+
+// Format Resmi: [NO_URUT_HARIAN]/[INISIAL_SURAT]/[INISIAL_PERUSAHAAN]/[TANGGAL]/[BULAN_ROMAWI]/[TAHUN]
+// Contoh: 001/ST/MJI/29/VIII/2026 atau 002/BAST/MJI/29/VIII/2026 atau 001/SPK/MJI/29/VIII/2026
+function formatOfficialNumber(seq: string, typeInitial: string, companyInitials: string, d: Date): string {
   const day = String(d.getDate()).padStart(2, '0');
   const romanMonth = getRomanMonth(d.getMonth());
-  const year = d.getFullYear();
+  return `${seq}/${typeInitial}/${companyInitials}/${day}/${romanMonth}/${d.getFullYear()}`;
+}
+
+/**
+ * Pratinjau nomor surat resmi TANPA menambah counter harian
+ * (untuk menampilkan preview di panel payload otomatis).
+ */
+export function previewOfficialLetterNumber(options: GenerateLetterNumberOptions): string {
+  const d = resolveDate(options.date);
+  const typeInitial = resolveTypeInitial(options.type);
   const companyInitials = extractCompanyInitials(options.companyName);
+  const seq = options.customSequence
+    ? String(options.customSequence).padStart(3, '0')
+    : peekNextDailySequence(typeInitial, d);
+  return formatOfficialNumber(seq, typeInitial, companyInitials, d);
+}
 
-  let typeInitial = 'ST';
-  if (options.type === 'BAST' || options.type === 'SURAT_BAST') {
-    typeInitial = 'BAST';
-  } else if (options.type === 'SPK' || options.type === 'SURAT_PENYERAHAN') {
-    typeInitial = 'SPK';
-  } else {
-    typeInitial = 'ST';
-  }
-
-  const seq = options.customSequence 
+export function generateOfficialLetterNumber(options: GenerateLetterNumberOptions): string {
+  const d = resolveDate(options.date);
+  const typeInitial = resolveTypeInitial(options.type);
+  const companyInitials = extractCompanyInitials(options.companyName);
+  const seq = options.customSequence
     ? String(options.customSequence).padStart(3, '0')
     : getNextDailySequence(typeInitial, d);
-
-  // Format Resmi: [NO_URUT_HARIAN]/[INISIAL_SURAT]/[INISIAL_PERUSAHAAN]/[TANGGAL]/[BULAN_ROMAWI]/[TAHUN]
-  // Contoh: 001/ST/MJI/29/VIII/2026 atau 002/BAST/MJI/29/VIII/2026 atau 001/SPK/MJI/29/VIII/2026
-  return `${seq}/${typeInitial}/${companyInitials}/${day}/${romanMonth}/${year}`;
+  return formatOfficialNumber(seq, typeInitial, companyInitials, d);
 }
 
 export function generateLetterNumber(date = new Date(), companyName = 'PT. MITRA JASATRIA INDONESIA'): string {
