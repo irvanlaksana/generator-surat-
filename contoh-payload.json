@@ -1,0 +1,47 @@
+{
+  "meta": {
+    "app": "generator-surat",
+    "version": 1,
+    "catatan": "CONTOH payload — bisa langsung diimpor lewat panel 'Isi Otomatis' (file atau tempel). Kop surat tidak pernah ikut (fix/terkunci)."
+  },
+  "letter": {
+    "customerName": "SUMARNI",
+    "customerAddress": "Dusun Kaliwiru RT 02 RW 05, Desa Karangmoncol, Purbalingga",
+    "customerContract": "00887721",
+    "customerDueDate": "2026-03-15",
+    "customerInstallment": "Rp 1.250.000",
+    "customerTotalInstallment": "Rp 7.500.000",
+    "customerUnpaidInstallmentCount": "6 Bulan",
+    "customerPenalty": "Rp 9.300.000",
+    "clientName": "Koperasi Anugrah Mega Mandiri (KAMM)",
+    "vehicleBrand": "HONDA / BEAT ESP 110",
+    "vehiclePlate": "R 5521 KZ",
+    "validFrom": "2026-09-11",
+    "validTo": "2026-09-25",
+    "signPlaceDate": "Purbalingga, 11 September 2026"
+  },
+  "bast": {
+    "jenis": "roda2",
+    "debiturNama": "SUMARNI",
+    "debiturAlamat": "Dusun Kaliwiru RT 02 RW 05, Desa Karangmoncol, Purbalingga",
+    "debiturHp": "0852-1122-3344",
+    "nomorKontrak": "00887721",
+    "krediturLeasing": "Koperasi Anugrah Mega Mandiri (KAMM)",
+    "kendaraanMerk": "HONDA",
+    "kendaraanType": "BEAT ESP 110",
+    "kendaraanTahun": "2020",
+    "kendaraanWarna": "Merah",
+    "kendaraanNoPol": "R 5521 KZ",
+    "kendaraanNoRangka": "MH8123456789",
+    "kendaraanNoMesin": "KSN123E456789",
+    "kota": "Purbalingga",
+    "tanggal": "11 September 2026",
+    "checklist": {
+      "stnk_asli": { "status": "baik", "catatan": "STNK asli ada, pajak aktif" },
+      "kunci_kontak": { "status": "baik", "catatan": "1 kunci asli" },
+      "kunci_cadangan": { "status": "tidak_ada", "catatan": "Tidak diserahkan" },
+      "spion_kanan": { "status": "rusak", "catatan": "Kaca retak" }
+    },
+    "catatanKhusus": "Contoh payload untuk uji coba import — silakan diedit."
+  }
+}
