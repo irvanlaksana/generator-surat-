@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { LetterData } from '../types';
 import { generateOfficialLetterNumber } from '../utils/letterNumber';
 import { Sparkles } from 'lucide-react';
+import { regionData } from '../data/regions';
 
 interface LetterFormProps {
   data: LetterData;
@@ -24,6 +25,28 @@ export default function LetterForm({ data, onChange }: LetterFormProps) {
     }
     
     onChange({ ...data, [name]: parsedValue });
+  };
+
+  const handleAddressChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    let newData = { ...data, [name]: value };
+
+    if (name === 'customerKabupaten') {
+      newData.customerKecamatan = '';
+      newData.customerKelurahan = '';
+    } else if (name === 'customerKecamatan') {
+      newData.customerKelurahan = '';
+    }
+
+    const parts = [];
+    if (newData.customerAddressDetail) parts.push(newData.customerAddressDetail);
+    if (newData.customerKelurahan) parts.push(`KEL. ${newData.customerKelurahan}`);
+    if (newData.customerKecamatan) parts.push(`KEC. ${newData.customerKecamatan}`);
+    if (newData.customerKabupaten) parts.push(`KAB. ${newData.customerKabupaten}`);
+
+    newData.customerAddress = parts.join(', ');
+
+    onChange(newData);
   };
 
   const handleGenerateLetterNumber = () => {
@@ -260,9 +283,40 @@ export default function LetterForm({ data, onChange }: LetterFormProps) {
                   <input type="text" name="customerName" value={data.customerName} onChange={handleChange} className={inputClass} />
                 </div>
               </div>
-              <div>
-                <label className={labelClass}>Alamat</label>
-                <textarea name="customerAddress" value={data.customerAddress} onChange={handleChange} rows={2} className={inputClass} />
+              <div className="space-y-2 p-3 border border-slate-200 bg-slate-50/50 rounded-lg">
+                <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">Alamat Nasabah</label>
+                
+                <input type="text" name="customerAddressDetail" value={data.customerAddressDetail || ''} onChange={handleAddressChange} className={inputClass} placeholder="Jalan / RT / RW (Contoh: KALIKABONG RT 004 RW 002)" />
+                
+                <div className="grid grid-cols-3 gap-2">
+                  <div>
+                    <label className={labelClass}>Kabupaten</label>
+                    <select name="customerKabupaten" value={data.customerKabupaten || ''} onChange={handleAddressChange} className={inputClass}>
+                      <option value="">Pilih Kab...</option>
+                      {Object.keys(regionData).map(kab => (
+                        <option key={kab} value={kab}>{kab}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className={labelClass}>Kecamatan</label>
+                    <select name="customerKecamatan" value={data.customerKecamatan || ''} onChange={handleAddressChange} className={inputClass} disabled={!data.customerKabupaten}>
+                      <option value="">Pilih Kec...</option>
+                      {data.customerKabupaten && regionData[data.customerKabupaten] && Object.keys(regionData[data.customerKabupaten]).map(kec => (
+                        <option key={kec} value={kec}>{kec}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className={labelClass}>Kelurahan/Desa</label>
+                    <select name="customerKelurahan" value={data.customerKelurahan || ''} onChange={handleAddressChange} className={inputClass} disabled={!data.customerKecamatan}>
+                      <option value="">Pilih Kel...</option>
+                      {data.customerKabupaten && data.customerKecamatan && regionData[data.customerKabupaten]?.[data.customerKecamatan] && regionData[data.customerKabupaten][data.customerKecamatan].map(kel => (
+                        <option key={kel} value={kel}>{kel}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
               </div>
               <div>
                 <label className={labelClass}>Jatuh Tempo</label>

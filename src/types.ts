@@ -70,6 +70,10 @@ export interface LetterData {
   customerContract: string;
   customerName: string;
   customerAddress: string;
+  customerAddressDetail?: string;
+  customerKabupaten?: string;
+  customerKecamatan?: string;
+  customerKelurahan?: string;
   customerDueDate: string;
   customerInstallment: string;
   customerTotalInstallment: string;
