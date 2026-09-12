@@ -11,3 +11,12 @@ export const formatDateID = (dateString: string): string => {
   }
   return dateString;
 };
+
+export const formatCleanAddress = (address: string): string => {
+  if (!address) return '';
+  return address
+    .replace(/,\s*KAB\.\s*[^,]+/gi, '')
+    .replace(/^KAB\.\s*[^,]+,?\s*/gi, '')
+    .trim()
+    .replace(/,\s*$/, '');
+};

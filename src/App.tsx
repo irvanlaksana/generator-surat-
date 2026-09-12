@@ -28,7 +28,7 @@ const initialData: LetterData = {
   clientName: 'Koperasi Anugrah Mega Mandiri (KAMM)',
   customerContract: '00730191',
   customerName: 'KISNO ANGKAH TRI HIDAYAT',
-  customerAddress: 'KALIKABONG RT 004 RW 002, KEL. KALIKABONG, KEC. KALIMANAH, KAB. PURBALINGGA',
+  customerAddress: 'KALIKABONG RT 004 RW 002, KEL. KALIKABONG, KEC. KALIMANAH',
   customerAddressDetail: 'KALIKABONG RT 004 RW 002',
   customerKabupaten: 'PURBALINGGA',
   customerKecamatan: 'KALIMANAH',

@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { LetterData } from '../types';
 import { generateOfficialLetterNumber } from '../utils/letterNumber';
+import { formatDateID, formatCleanAddress } from '../utils/dateFormatter';
 import { Sparkles } from 'lucide-react';
 import { regionData } from '../data/regions';
 
@@ -27,24 +28,41 @@ export default function LetterForm({ data, onChange }: LetterFormProps) {
     onChange({ ...data, [name]: parsedValue });
   };
 
+  // Clean up any lingering KAB. from customerAddress
+  useEffect(() => {
+    if (data.customerAddress && /KAB\./i.test(data.customerAddress)) {
+      onChange({
+        ...data,
+        customerAddress: formatCleanAddress(data.customerAddress),
+      });
+    }
+  }, [data.customerAddress]);
+
   const handleAddressChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     let newData = { ...data, [name]: value };
 
-    if (name === 'customerKabupaten') {
-      newData.customerKecamatan = '';
-      newData.customerKelurahan = '';
-    } else if (name === 'customerKecamatan') {
+    if (name === 'customerKecamatan') {
+      let detectedKab = '';
+      for (const [kab, kecMap] of Object.entries(regionData)) {
+        if (kecMap[value]) {
+          detectedKab = kab;
+          break;
+        }
+      }
+      newData.customerKabupaten = detectedKab;
       newData.customerKelurahan = '';
     }
 
     const parts = [];
-    if (newData.customerAddressDetail) parts.push(newData.customerAddressDetail);
+    if (newData.customerAddressDetail) {
+      parts.push(formatCleanAddress(newData.customerAddressDetail));
+    }
     if (newData.customerKelurahan) parts.push(`KEL. ${newData.customerKelurahan}`);
     if (newData.customerKecamatan) parts.push(`KEC. ${newData.customerKecamatan}`);
-    if (newData.customerKabupaten) parts.push(`KAB. ${newData.customerKabupaten}`);
+    // Do not append KAB.
 
-    newData.customerAddress = parts.join(', ');
+    newData.customerAddress = parts.filter(Boolean).join(', ');
 
     onChange(newData);
   };
@@ -288,35 +306,38 @@ export default function LetterForm({ data, onChange }: LetterFormProps) {
                 
                 <input type="text" name="customerAddressDetail" value={data.customerAddressDetail || ''} onChange={handleAddressChange} className={inputClass} placeholder="Jalan / RT / RW (Contoh: KALIKABONG RT 004 RW 002)" />
                 
-                <div className="grid grid-cols-3 gap-2">
-                  <div>
-                    <label className={labelClass}>Kabupaten</label>
-                    <select name="customerKabupaten" value={data.customerKabupaten || ''} onChange={handleAddressChange} className={inputClass}>
-                      <option value="">Pilih Kab...</option>
-                      {Object.keys(regionData).map(kab => (
-                        <option key={kab} value={kab}>{kab}</option>
-                      ))}
-                    </select>
-                  </div>
+                <div className="grid grid-cols-2 gap-2">
                   <div>
                     <label className={labelClass}>Kecamatan</label>
-                    <select name="customerKecamatan" value={data.customerKecamatan || ''} onChange={handleAddressChange} className={inputClass} disabled={!data.customerKabupaten}>
-                      <option value="">Pilih Kec...</option>
-                      {data.customerKabupaten && regionData[data.customerKabupaten] && Object.keys(regionData[data.customerKabupaten]).map(kec => (
-                        <option key={kec} value={kec}>{kec}</option>
+                    <select name="customerKecamatan" value={data.customerKecamatan || ''} onChange={handleAddressChange} className={inputClass}>
+                      <option value="">Pilih Kecamatan...</option>
+                      {Object.entries(regionData).map(([kab, kecs]) => (
+                        <optgroup key={kab} label={`KAB. ${kab}`}>
+                          {Object.keys(kecs).map(kec => (
+                            <option key={`${kab}-${kec}`} value={kec}>{kec}</option>
+                          ))}
+                        </optgroup>
                       ))}
                     </select>
                   </div>
                   <div>
-                    <label className={labelClass}>Kelurahan/Desa</label>
+                    <label className={labelClass}>Kelurahan / Desa</label>
                     <select name="customerKelurahan" value={data.customerKelurahan || ''} onChange={handleAddressChange} className={inputClass} disabled={!data.customerKecamatan}>
-                      <option value="">Pilih Kel...</option>
+                      <option value="">Pilih Kelurahan/Desa...</option>
                       {data.customerKabupaten && data.customerKecamatan && regionData[data.customerKabupaten]?.[data.customerKecamatan] && regionData[data.customerKabupaten][data.customerKecamatan].map(kel => (
                         <option key={kel} value={kel}>{kel}</option>
                       ))}
                     </select>
                   </div>
                 </div>
+                {data.customerAddress && (
+                  <div className="mt-2 pt-1.5 border-t border-slate-200/80 flex items-start gap-1.5 text-[11px] text-slate-500">
+                    <span className="font-semibold text-slate-600 shrink-0">Alamat di Surat:</span>
+                    <span className="font-mono text-slate-800 uppercase break-words">
+                      {formatCleanAddress(data.customerAddress)}
+                    </span>
+                  </div>
+                )}
               </div>
               <div>
                 <label className={labelClass}>Jatuh Tempo</label>

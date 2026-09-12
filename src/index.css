@@ -99,6 +99,7 @@
     background: #ffffff !important;
     box-sizing: border-box !important;
     outline: none !important;
+    min-height: 0 !important;
   }
 
   /* Page break rules */
