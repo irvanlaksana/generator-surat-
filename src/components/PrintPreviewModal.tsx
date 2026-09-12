@@ -62,6 +62,18 @@ export default function PrintPreviewModal({
   const containerRef = useRef<HTMLDivElement>(null);
   const activePaper = PAPER_SIZES[paperSize] || PAPER_SIZES.f4;
 
+  // Manage body class for print styling
+  useEffect(() => {
+    if (isOpen) {
+      document.body.classList.add('print-preview-modal-open');
+    } else {
+      document.body.classList.remove('print-preview-modal-open');
+    }
+    return () => {
+      document.body.classList.remove('print-preview-modal-open');
+    };
+  }, [isOpen]);
+
   // Auto-calculate optimal zoom to fit preview on open or resize
   useEffect(() => {
     if (!isOpen) return;
@@ -220,9 +232,9 @@ export default function PrintPreviewModal({
   const hasAttachments = Boolean(letterData?.attachments && letterData.attachments.length > 0);
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-slate-900/90 backdrop-blur-md animate-in fade-in duration-200">
+    <div className="print-preview-modal-root fixed inset-0 z-50 flex flex-col bg-slate-900/90 backdrop-blur-md animate-in fade-in duration-200">
       {/* Top Toolbar */}
-      <header className="h-14 bg-slate-900 border-b border-slate-800 px-3 sm:px-6 flex items-center justify-between gap-3 text-white shrink-0 shadow-lg">
+      <header className="h-14 bg-slate-900 border-b border-slate-800 px-3 sm:px-6 flex items-center justify-between gap-3 text-white shrink-0 shadow-lg print:hidden">
         {/* Left: Title & Document Info */}
         <div className="flex items-center gap-3 min-w-0">
           <div className="p-2 bg-[#5A5A40] rounded-lg text-white shadow-xs">
@@ -317,7 +329,7 @@ export default function PrintPreviewModal({
       </header>
 
       {/* Secondary Controls Bar (Zoom, Paper Dimensions, Page Filter, Guidelines) */}
-      <div className="bg-slate-800/95 border-b border-slate-700/80 px-4 py-2 flex flex-wrap items-center justify-between gap-3 text-xs text-slate-300 shrink-0">
+      <div className="bg-slate-800/95 border-b border-slate-700/80 px-4 py-2 flex flex-wrap items-center justify-between gap-3 text-xs text-slate-300 shrink-0 print:hidden">
         {/* Left: Paper Sizes Pills */}
         <div className="flex items-center gap-1 overflow-x-auto py-0.5">
           <span className="text-[11px] font-semibold text-slate-400 mr-1 hidden md:inline">Ukuran Kertas:</span>
@@ -493,9 +505,11 @@ export default function PrintPreviewModal({
       {/* Main Preview Stage */}
       <div 
         ref={containerRef}
+        id="print-modal-canvas"
         className="flex-1 overflow-auto p-4 sm:p-8 flex justify-center items-start custom-scrollbar bg-slate-950/80"
       >
         <div
+          id="print-zoom-wrapper"
           className={`flex flex-col items-center gap-10 transition-transform duration-150 origin-top ${
             isGrayscale ? 'filter grayscale contrast-105' : ''
           }`}
@@ -508,7 +522,7 @@ export default function PrintPreviewModal({
               {(activePageIndex === 0 || activePageIndex === 1) && (
                 <div className="relative group">
                   {/* Paper Header / Tag */}
-                  <div className="absolute -top-7 left-0 right-0 flex items-center justify-between text-[11px] text-slate-400 font-sans font-medium px-1">
+                  <div className="absolute -top-7 left-0 right-0 flex items-center justify-between text-[11px] text-slate-400 font-sans font-medium px-1 print:hidden">
                     <span className="flex items-center gap-1 text-slate-300 font-semibold">
                       <FileText size={13} className="text-amber-400" /> Halaman 1: Dokumen Surat Tugas
                     </span>
@@ -524,22 +538,24 @@ export default function PrintPreviewModal({
                       width: `${activePaper.widthMm}mm`,
                       minHeight: `${activePaper.heightMm}mm`,
                       paddingTop: '10mm',
-                      paddingLeft: '20mm',
-                      paddingRight: '20mm',
-                      paddingBottom: '35mm',
+                      paddingLeft: '18mm',
+                      paddingRight: '18mm',
+                      paddingBottom: '12mm',
                     }}
-                    className={`relative bg-white shadow-[0_25px_60px_rgba(0,0,0,0.45)] border border-slate-300 font-serif text-[10pt] leading-[1.4] box-border text-black ${
+                    className={`relative bg-white shadow-[0_25px_60px_rgba(0,0,0,0.45)] border border-slate-300 font-serif text-[9.5pt] leading-[1.28] box-border text-black print-document-sheet ${
+                      hasAttachments && activePageIndex === 0 ? 'print-page-break' : 'print-page-last'
+                    } ${
                       showGuidelines ? 'outline outline-1 outline-dashed outline-rose-400' : ''
                     }`}
                   >
                     {/* Visual Guidelines Overlay (if active) */}
                     {showGuidelines && (
-                      <div className="absolute inset-0 pointer-events-none border border-emerald-500/30 m-[10mm_20mm_35mm_20mm] flex flex-col justify-between">
+                      <div className="absolute inset-0 pointer-events-none border border-emerald-500/30 m-[10mm_18mm_12mm_18mm] flex flex-col justify-between print:hidden">
                         <div className="text-[9px] font-sans font-bold text-emerald-600 bg-emerald-50/80 px-1 py-0.5 self-start">
-                          Margin Atas: 10mm | Kiri/Kanan: 20mm
+                          Margin Atas: 10mm | Kiri/Kanan: 18mm
                         </div>
                         <div className="text-[9px] font-sans font-bold text-emerald-600 bg-emerald-50/80 px-1 py-0.5 self-end">
-                          Margin Bawah: 35mm
+                          Margin Bawah: 12mm
                         </div>
                       </div>
                     )}
@@ -565,18 +581,18 @@ export default function PrintPreviewModal({
                     </div>
 
                     {/* Title Section */}
-                    <div className="text-center mb-6">
-                      <h2 className="font-bold underline text-[14pt] tracking-wide uppercase">Surat Tugas</h2>
-                      <p className="font-bold text-[11pt] font-mono tracking-wide mt-1 bg-slate-100/70 inline-block px-3 py-0.5 border border-slate-300 rounded">
+                    <div className="text-center mb-3">
+                      <h2 className="font-bold underline text-[13.5pt] tracking-wide uppercase">Surat Tugas</h2>
+                      <p className="font-bold text-[10.5pt] font-mono tracking-wide mt-0.5 bg-slate-100/70 inline-block px-2.5 py-0.5 border border-slate-300 rounded">
                         Nomor: {letterData.letterNumber}
                       </p>
                     </div>
 
                     {/* Body */}
-                    <div className="space-y-0 text-justify letter-content text-[10pt]">
+                    <div className="space-y-0 text-justify letter-content text-[9.5pt]">
                       <p>Yang bertanda tangan di bawah ini, mewakili Manajemen <strong>{letterData.kopCompanyName}</strong>:</p>
 
-                      <div className="pl-8 space-y-0.5 my-2.5">
+                      <div className="pl-6 space-y-0.5 my-1.5">
                         <div className="grid grid-cols-[100px_10px_1fr]">
                           <div className="font-bold">Nama</div><div>:</div><div className="font-bold uppercase">{letterData.assignerName}</div>
                         </div>
@@ -587,12 +603,12 @@ export default function PrintPreviewModal({
 
                       <p>Dengan ini memberikan tugas penuh, wewenang, dan tanggung jawab penagihan di lapangan kepada :</p>
 
-                      <div className="my-3 pl-8">
-                        <table className="w-full text-left font-bold mb-1.5 text-[10pt]">
+                      <div className="my-1.5 pl-6">
+                        <table className="w-full text-left font-bold mb-1 text-[9.5pt]">
                           <thead>
                             <tr>
-                              <th className="pb-1.5 w-[50%]">Nama</th>
-                              <th className="pb-1.5 w-[50%]">Jabatan</th>
+                              <th className="pb-1 w-[50%]">Nama</th>
+                              <th className="pb-1 w-[50%]">Jabatan</th>
                             </tr>
                           </thead>
                           <tbody>
@@ -608,89 +624,89 @@ export default function PrintPreviewModal({
                         Untuk melakukan konfirmasi, penagihan, dan negosiasi penyelesaian kewajiban pembayaran atas nama Debitur/Nasabah dari <strong>{letterData.clientName}</strong> yang penagihannya dikuasakan kepada <strong>{letterData.kopCompanyName}</strong>.
                       </p>
 
-                      <p className="mt-2">Berikut data nasabah :</p>
+                      <p className="mt-1.5">Berikut data nasabah :</p>
 
-                      <div className="pl-8 space-y-0.5 mb-3 text-[10pt]">
-                        <div className="grid grid-cols-[200px_10px_1fr]">
+                      <div className="pl-6 space-y-0.5 mb-2 text-[9.5pt]">
+                        <div className="grid grid-cols-[180px_10px_1fr]">
                           <div>No. Kontrak</div><div>:</div><div>{letterData.customerContract}</div>
                         </div>
-                        <div className="grid grid-cols-[200px_10px_1fr]">
+                        <div className="grid grid-cols-[180px_10px_1fr]">
                           <div>Nama</div><div>:</div><div className="uppercase">{letterData.customerName}</div>
                         </div>
-                        <div className="grid grid-cols-[200px_10px_1fr]">
+                        <div className="grid grid-cols-[180px_10px_1fr]">
                           <div>Alamat</div><div>:</div><div className="uppercase">{letterData.customerAddress}</div>
                         </div>
-                        <div className="grid grid-cols-[200px_10px_1fr]">
+                        <div className="grid grid-cols-[180px_10px_1fr]">
                           <div>Tanggal Jatuh Tempo</div><div>:</div><div className="uppercase">{formatDateID(letterData.customerDueDate)}</div>
                         </div>
-                        <div className="grid grid-cols-[200px_10px_1fr]">
+                        <div className="grid grid-cols-[180px_10px_1fr]">
                           <div>Angsuran</div><div>:</div><div>{letterData.customerInstallment}</div>
                         </div>
                         {letterData.customerTotalInstallment && (
-                          <div className="grid grid-cols-[200px_10px_1fr]">
+                          <div className="grid grid-cols-[180px_10px_1fr]">
                             <div>Total Angsuran</div><div>:</div><div>{letterData.customerTotalInstallment}</div>
                           </div>
                         )}
-                        <div className="grid grid-cols-[200px_10px_1fr]">
+                        <div className="grid grid-cols-[180px_10px_1fr]">
                           <div>DENDA</div><div>:</div><div>{letterData.customerPenalty}</div>
                         </div>
                       </div>
 
                       <p>Adapun spesifikasi kendaraan sebagai berikut :</p>
 
-                      <div className="pl-8 space-y-0.5 mb-4 text-[10pt]">
-                        <div className="grid grid-cols-[200px_10px_1fr]">
+                      <div className="pl-6 space-y-0.5 mb-2 text-[9.5pt]">
+                        <div className="grid grid-cols-[180px_10px_1fr]">
                           <div>Merk/Type</div><div>:</div><div className="uppercase">{letterData.vehicleBrand}</div>
                         </div>
-                        <div className="grid grid-cols-[200px_10px_1fr]">
+                        <div className="grid grid-cols-[180px_10px_1fr]">
                           <div>Nomor Polisi</div><div>:</div><div className="uppercase font-semibold">{letterData.vehiclePlate}</div>
                         </div>
                       </div>
 
                       <p>Pelaksanaan Surat Tugas ini wajib tunduk dan patuh pada ketentuan sebagai berikut:</p>
 
-                      <div className="space-y-0 text-[10pt] leading-[1.35]">
-                        <div className="text-center font-bold mt-4 mb-1.5 text-[10.5pt]">MASA BERLAKU SURAT TUGAS</div>
+                      <div className="space-y-0 text-[9.5pt] leading-[1.28]">
+                        <div className="text-center font-bold mt-2 mb-0.5 text-[9.5pt]">MASA BERLAKU SURAT TUGAS</div>
                         <p>
                           Surat Tugas ini berlaku efektif terhitung sejak tanggal {formatDateID(letterData.validFrom)} sampai dengan tanggal {formatDateID(letterData.validTo)}. Apabila masa berlaku telah berakhir, Surat Tugas ini dinyatakan tidak berlaku lagi dan wajib diperpanjang melalui persetujuan Manajemen {letterData.kopCompanyName}.
                         </p>
 
-                        <div className="text-center font-bold mt-4 mb-1.5 text-[10.5pt]">WEWENANG DAN TANGGUNG JAWAB PETUGAS</div>
+                        <div className="text-center font-bold mt-2 mb-0.5 text-[9.5pt]">WEWENANG DAN TANGGUNG JAWAB PETUGAS</div>
                         <p>Dalam menjalankan tugas penagihan di lapangan, Tim Penagihan berwenang:</p>
-                        <ul className="list-disc pl-8 space-y-1.5">
-                          <li className="pl-2">Mendatangi alamat domisili, kantor, atau lokasi tempat usaha Debitur sesuai data resmi yang tercantum dalam lembar kerja penagihan.</li>
-                          <li className="pl-2">Melakukan konfirmasi, negosiasi, dan menyampaikan Surat Peringatan (SP) atau tagihan resmi yang diterbitkan oleh Perusahaan/Kreditur/Mitra Perusahaan.</li>
-                          <li className="pl-2">Untuk keperluan diatas, PENERIMA TUGAS berhak untuk menerima jaminan piutang/jaminan fidusia, menandatangani dokumen - dokumen, meminta tanda tangan, serta melakukan tindakan yang dianggap perlu dalam melaksanakan tugas tersebut/meminta bantuan pihak berwajib jika diperlukan.</li>
+                        <ul className="list-disc pl-6 space-y-0.5 text-[9pt] leading-[1.24]">
+                          <li className="pl-1.5">Mendatangi alamat domisili, kantor, atau lokasi tempat usaha Debitur sesuai data resmi yang tercantum dalam lembar kerja penagihan.</li>
+                          <li className="pl-1.5">Melakukan konfirmasi, negosiasi, dan menyampaikan Surat Peringatan (SP) atau tagihan resmi yang diterbitkan oleh Perusahaan/Kreditur/Mitra Perusahaan.</li>
+                          <li className="pl-1.5">Untuk keperluan diatas, PENERIMA TUGAS berhak untuk menerima jaminan piutang/jaminan fidusia, menandatangani dokumen - dokumen, meminta tanda tangan, serta melakukan tindakan yang dianggap perlu dalam melaksanakan tugas tersebut/meminta bantuan pihak berwajib jika diperlukan.</li>
                         </ul>
 
-                        <div className="text-center font-bold mt-4 mb-1.5 text-[10.5pt]">LARANGAN DAN KEPATUHAN</div>
-                        <ul className="list-disc pl-8 space-y-1.5">
-                          <li className="pl-2">Dilarang menerima pembayaran tunai (cash) secara langsung dari Debitur dalam bentuk apa pun, kecuali menggunakan Virtual Account resmi atau tanda terima sah dari sistem perusahaan.</li>
-                          <li className="pl-2">Dilarang menggunakan ancaman, kekerasan fisik, intimidasi, penekanan secara psikologis, atau tindakan melawan hukum yang melanggar Kode Etik Penagihan Bank Indonesia (BI), Otoritas Jasa Keuangan (OJK), serta Peraturan Perundang-undangan Republik Indonesia.</li>
-                          <li className="pl-2">Petugas wajib bersikap sopan, profesional, mengenakan pakaian rapi dan sopan selama berada di lapangan.</li>
-                          <li className="pl-2">Petugas wajib melaporkan hasil penagihan (Field Report) secara real-time melalui sistem aplikasi penagihan resmi {letterData.kopCompanyName} pada hari yang sama.</li>
+                        <div className="text-center font-bold mt-2 mb-0.5 text-[9.5pt]">LARANGAN DAN KEPATUHAN</div>
+                        <ul className="list-disc pl-6 space-y-0.5 text-[9pt] leading-[1.24]">
+                          <li className="pl-1.5">Dilarang menerima pembayaran tunai (cash) secara langsung dari Debitur dalam bentuk apa pun, kecuali menggunakan Virtual Account resmi atau tanda terima sah dari sistem perusahaan.</li>
+                          <li className="pl-1.5">Dilarang menggunakan ancaman, kekerasan fisik, intimidasi, penekanan secara psikologis, atau tindakan melawan hukum yang melanggar Kode Etik Penagihan Bank Indonesia (BI), Otoritas Jasa Keuangan (OJK), serta Peraturan Perundang-undangan Republik Indonesia.</li>
+                          <li className="pl-1.5">Petugas wajib bersikap sopan, profesional, mengenakan pakaian rapi dan sopan selama berada di lapangan.</li>
+                          <li className="pl-1.5">Petugas wajib melaporkan hasil penagihan (Field Report) secara real-time melalui sistem aplikasi penagihan resmi {letterData.kopCompanyName} pada hari yang sama.</li>
                         </ul>
 
-                        <div className="text-center font-bold mt-4 mb-1.5 text-[10.5pt]">SANKSI DAN TANGGUNG JAWAB HUKUM</div>
-                        <ul className="list-disc pl-8 space-y-1.5">
-                          <li className="pl-2">Setiap pelanggaran terhadap kode etik, penyalahgunaan wewenang, penggelapan dana penagihan, atau tindakan penyimpangan yang dilakukan oleh Petugas Penagihan akan dikenakan sanksi tegas berupa Pemutusan Hubungan Kerja (PHK) secara tidak hormat.</li>
-                          <li className="pl-2">Tindakan pelanggaran hukum yang dilakukan oleh Petugas di luar prosedur resmi Perusahaan menjadi tanggung jawab pribadi petugas bersangkutan secara pidana maupun perdata ({letterData.kopCompanyName} membebaskan diri dari segala tuntutan hukum akibat penyimpangan oknum).</li>
+                        <div className="text-center font-bold mt-2 mb-0.5 text-[9.5pt]">SANKSI DAN TANGGUNG JAWAB HUKUM</div>
+                        <ul className="list-disc pl-6 space-y-0.5 text-[9pt] leading-[1.24]">
+                          <li className="pl-1.5">Setiap pelanggaran terhadap kode etik, penyalahgunaan wewenang, penggelapan dana penagihan, atau tindakan penyimpangan yang dilakukan oleh Petugas Penagihan akan dikenakan sanksi tegas berupa Pemutusan Hubungan Kerja (PHK) secara tidak hormat.</li>
+                          <li className="pl-1.5">Tindakan pelanggaran hukum yang dilakukan oleh Petugas di luar prosedur resmi Perusahaan menjadi tanggung jawab pribadi petugas bersangkutan secara pidana maupun perdata ({letterData.kopCompanyName} membebaskan diri dari segala tuntutan hukum akibat penyimpangan oknum).</li>
                         </ul>
 
-                        <p className="mt-4 pt-2">
+                        <p className="mt-2 pt-0.5">
                           Demikian Surat Tugas ini diterbitkan untuk dipergunakan sebagaimana mestinya dan dilaksanakan dengan penuh rasa tanggung jawab demi menjaga integritas, profesionalisme, dan nama baik {letterData.kopCompanyName} serta Kreditur.
                         </p>
                       </div>
 
                       {/* Signatures */}
-                      <div className="mt-8 flex justify-between break-inside-avoid text-[10pt]">
-                        <div className="w-[300px]">
-                          <p className="mb-20"><br/>Pemberi Tugas,<br/>{letterData.kopCompanyName}</p>
+                      <div className="mt-3.5 flex justify-between break-inside-avoid text-[9.5pt]">
+                        <div className="w-[260px]">
+                          <p className="mb-11"><br/>Pemberi Tugas,<br/>{letterData.kopCompanyName}</p>
                           <p className="font-bold underline">{letterData.assignerName}</p>
                           <p>{letterData.assignerPosition}</p>
                         </div>
-                        <div className="w-[300px]">
-                          <p className="mb-20">{letterData.signPlaceDate}<br/>Penerima Tugas,<br/>PETUGAS PENAGIHAN</p>
+                        <div className="w-[260px]">
+                          <p className="mb-11">{letterData.signPlaceDate}<br/>Penerima Tugas,<br/>PETUGAS PENAGIHAN</p>
                           <p className="font-bold underline">{letterData.assigneeName}</p>
                         </div>
                       </div>
@@ -702,7 +718,7 @@ export default function PrintPreviewModal({
               {/* Page 2: Lampiran (if any) */}
               {hasAttachments && (activePageIndex === 0 || activePageIndex === 2) && (
                 <div className="relative group">
-                  <div className="absolute -top-7 left-0 right-0 flex items-center justify-between text-[11px] text-slate-400 font-sans font-medium px-1">
+                  <div className="absolute -top-7 left-0 right-0 flex items-center justify-between text-[11px] text-slate-400 font-sans font-medium px-1 print:hidden">
                     <span className="flex items-center gap-1 text-slate-300 font-semibold">
                       <FileText size={13} className="text-amber-400" /> Halaman 2: Lampiran Foto / Berkas
                     </span>
@@ -717,11 +733,11 @@ export default function PrintPreviewModal({
                       width: `${activePaper.widthMm}mm`,
                       minHeight: `${activePaper.heightMm}mm`,
                       paddingTop: '10mm',
-                      paddingLeft: '20mm',
-                      paddingRight: '20mm',
-                      paddingBottom: '35mm',
+                      paddingLeft: '18mm',
+                      paddingRight: '18mm',
+                      paddingBottom: '12mm',
                     }}
-                    className={`bg-white shadow-[0_25px_60px_rgba(0,0,0,0.45)] border border-slate-300 font-serif text-[10pt] leading-[1.4] box-border text-black ${
+                    className={`bg-white shadow-[0_25px_60px_rgba(0,0,0,0.45)] border border-slate-300 font-serif text-[9.5pt] leading-[1.28] box-border text-black print-document-sheet print-page-last ${
                       showGuidelines ? 'outline outline-1 outline-dashed outline-rose-400' : ''
                     }`}
                   >
@@ -749,7 +765,7 @@ export default function PrintPreviewModal({
               {/* Surat Penyerahan */}
               {(bastPageMode === 'both' || bastPageMode === 'penyerahan') && (
                 <div className="relative group">
-                  <div className="absolute -top-7 left-0 right-0 flex items-center justify-between text-[11px] text-slate-400 font-sans font-medium px-1">
+                  <div className="absolute -top-7 left-0 right-0 flex items-center justify-between text-[11px] text-slate-400 font-sans font-medium px-1 print:hidden">
                     <span className="flex items-center gap-1 text-slate-300 font-semibold">
                       <FileText size={13} className="text-amber-400" /> Halaman 1: Surat Penyerahan Sukarela
                     </span>
@@ -760,7 +776,9 @@ export default function PrintPreviewModal({
 
                   <div
                     id="preview-modal-penyerahan-doc"
-                    className={`shadow-[0_25px_60px_rgba(0,0,0,0.45)] border border-slate-300 ${
+                    className={`shadow-[0_25px_60px_rgba(0,0,0,0.45)] border border-slate-300 print-document-sheet ${
+                      bastPageMode === 'both' ? 'print-page-break' : 'print-page-last'
+                    } ${
                       showGuidelines ? 'outline outline-1 outline-dashed outline-rose-400' : ''
                     }`}
                   >
@@ -772,7 +790,7 @@ export default function PrintPreviewModal({
               {/* Lembar BAST */}
               {(bastPageMode === 'both' || bastPageMode === 'bast') && (
                 <div className="relative group">
-                  <div className="absolute -top-7 left-0 right-0 flex items-center justify-between text-[11px] text-slate-400 font-sans font-medium px-1">
+                  <div className="absolute -top-7 left-0 right-0 flex items-center justify-between text-[11px] text-slate-400 font-sans font-medium px-1 print:hidden">
                     <span className="flex items-center gap-1 text-slate-300 font-semibold">
                       <FileText size={13} className="text-amber-400" /> Halaman 2: Lembar BAST & Checklist Fisik
                     </span>
@@ -783,7 +801,7 @@ export default function PrintPreviewModal({
 
                   <div
                     id="preview-modal-bast-sheet-doc"
-                    className={`shadow-[0_25px_60px_rgba(0,0,0,0.45)] border border-slate-300 ${
+                    className={`shadow-[0_25px_60px_rgba(0,0,0,0.45)] border border-slate-300 print-document-sheet print-page-last ${
                       showGuidelines ? 'outline outline-1 outline-dashed outline-rose-400' : ''
                     }`}
                   >
@@ -797,7 +815,7 @@ export default function PrintPreviewModal({
       </div>
 
       {/* Footer Status Bar */}
-      <footer className="h-9 bg-slate-900 border-t border-slate-800 px-4 flex items-center justify-between text-[11px] text-slate-400 shrink-0">
+      <footer className="h-9 bg-slate-900 border-t border-slate-800 px-4 flex items-center justify-between text-[11px] text-slate-400 shrink-0 print:hidden">
         <div className="flex items-center gap-3">
           <span className="flex items-center gap-1">
             <Info size={12} className="text-amber-400" />
