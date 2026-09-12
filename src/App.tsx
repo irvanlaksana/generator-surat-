@@ -1,25 +1,25 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import LetterForm from './components/LetterForm';
 import LetterPreview from './components/LetterPreview';
 import BastGenerator from './components/BastGenerator';
-import AutoFillPanel from './components/AutoFillPanel';
 import GoogleDriveSaveModal from './components/GoogleDriveSaveModal';
 import PrintPreviewModal from './components/PrintPreviewModal';
 import { LetterData, BastData, PaperSize, DEFAULT_PAPER_SIZE, PAPER_SIZES } from './types';
-import { FileText, ClipboardCheck, UploadCloud, Printer, Eye, Zap } from 'lucide-react';
+import { FileText, ClipboardCheck, UploadCloud, Printer, Eye } from 'lucide-react';
 import { generateLetterNumber } from './utils/letterNumber';
 import { CONTOH_RODA4, syncChecklist } from './data/defaults';
-import { KOP_COMPANY_NAME, KOP_DEFAULT_SETTINGS, KOP_IMAGE_FIX } from './data/kopSurat';
-import { letterToBast, bastToLetter } from './utils/crossMapper';
-import { AutoFillPayload, readAutoFillPayloadFromLocation } from './utils/payload';
 
 type DocumentType = 'surat_tugas' | 'bast';
 
 const initialData: LetterData = {
-  // KOP SURAT FIX — terkunci; tidak bisa diganti dari form maupun payload otomatis
-  kopImage: KOP_IMAGE_FIX,
-  ...KOP_DEFAULT_SETTINGS,
-  kopCompanyName: KOP_COMPANY_NAME,
+  kopImage: null,
+  kopImageHeight: 120,
+  kopImageFit: 'contain',
+  kopImageAlign: 'center',
+  kopImageOffsetY: 0,
+  kopImageOffsetX: 0,
+  kopImageMarginBottom: 32,
+  kopCompanyName: 'PT. MITRA JASATRIA INDONESIA',
   letterNumber: generateLetterNumber(),
   assignerName: 'FILEMO HALAWA',
   assignerPosition: 'DIREKTUR',
@@ -69,19 +69,12 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<'form' | 'preview'>('form');
   const [isDriveModalOpen, setIsDriveModalOpen] = useState(false);
   const [isPrintPreviewOpen, setIsPrintPreviewOpen] = useState(false);
-  const [isAutoFillOpen, setIsAutoFillOpen] = useState(false);
 
   const handleApplyToLetter = (partial: Partial<LetterData>) => {
-    setData((prev) => {
-      // KOP SURAT FIX: field kop tidak pernah bisa diubah oleh payload apa pun
-      const { kopImage, kopCompanyName, ...safePartial } = partial;
-      void kopImage;
-      void kopCompanyName;
-      return {
-        ...prev,
-        ...safePartial,
-      };
-    });
+    setData((prev) => ({
+      ...prev,
+      ...partial,
+    }));
   };
 
   const handleApplyToBast = (partial: Partial<BastData>) => {
@@ -95,23 +88,6 @@ export default function App() {
       };
     });
   };
-
-  /** Titik masuk tunggal semua payload otomatis (input inti / JSON / link). */
-  const applyAutoFillPayload = (payload: AutoFillPayload) => {
-    if (payload.letter && Object.keys(payload.letter).length > 0) handleApplyToLetter(payload.letter);
-    if (payload.bast && Object.keys(payload.bast).length > 0) handleApplyToBast(payload.bast);
-  };
-
-  /** Sinkronisasi dua arah antar dokumen (lihat src/utils/crossMapper.ts). */
-  const handleSyncToBast = () => handleApplyToBast(letterToBast(data));
-  const handleSyncToLetter = () => handleApplyToLetter(bastToLetter(bastData));
-
-  // Pre-fill via URL: buka link dengan #p=... -> semua form langsung terisi (sekali saja, lalu URL dibersihkan)
-  useEffect(() => {
-    const payload = readAutoFillPayloadFromLocation();
-    if (payload) applyAutoFillPayload(payload);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   const activeClientName = docType === 'surat_tugas' ? data.clientName : bastData.krediturLeasing;
   const activeDebtorName = docType === 'surat_tugas' ? data.customerName : bastData.debiturNama;
@@ -183,19 +159,6 @@ export default function App() {
               ))}
             </select>
           </div>
-
-          {/* Tombol Payload Otomatis (isi cepat + sinkron + import/export) */}
-          <button
-            type="button"
-            id="btn-autofill-payload"
-            onClick={() => setIsAutoFillOpen(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-[#5A5A40] hover:bg-[#484833] text-white rounded-lg text-xs font-bold transition shadow-2xs cursor-pointer active:scale-95"
-            title="Isi otomatis kedua dokumen, sinkron antar form, import/export payload JSON & link pre-fill"
-          >
-            <Zap size={14} />
-            <span className="hidden sm:inline">Isi Otomatis</span>
-            <span className="sm:hidden">Auto</span>
-          </button>
 
           {/* Tombol Pratinjau Cetak */}
           <button
@@ -312,17 +275,6 @@ export default function App() {
         suggestedClientName={activeClientName}
         suggestedDebtorName={activeDebtorName}
         suggestedContractNo={activeContractNo}
-      />
-
-      {/* Panel Payload Otomatis */}
-      <AutoFillPanel
-        isOpen={isAutoFillOpen}
-        onClose={() => setIsAutoFillOpen(false)}
-        letterData={data}
-        bastData={bastData}
-        onApply={applyAutoFillPayload}
-        onSyncToBast={handleSyncToBast}
-        onSyncToLetter={handleSyncToLetter}
       />
     </div>
   );

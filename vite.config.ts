@@ -17,9 +17,6 @@ export default defineConfig(() => {
       hmr: process.env.DISABLE_HMR !== 'true',
       // Disable file watching when DISABLE_HMR is true to save CPU during agent edits.
       watch: process.env.DISABLE_HMR === 'true' ? null : {},
-      // Izinkan host preview sandbox (mis. https://3000-xxxx.e2b.app) agar
-      // aplikasi bisa dibuka lewat proxy preview, bukan hanya localhost.
-      allowedHosts: ['.e2b.app'],
     },
   };
 });
