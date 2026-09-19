@@ -81,6 +81,8 @@ export interface LetterData {
   customerUnpaidInstallmentCount: string;
   attachments: AttachmentData[];
   vehicleBrand: string;
+  vehicleBrandMake?: string;
+  vehicleBrandModel?: string;
   vehiclePlate: string;
   validFrom: string;
   validTo: string;

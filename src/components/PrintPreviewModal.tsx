@@ -29,7 +29,7 @@ import SuratPenyerahan from './SuratPenyerahan';
 import BastSheet from './BastSheet';
 import jsPDF from 'jspdf';
 import { toJpeg } from 'html-to-image';
-import { formatDateID, formatCleanAddress } from '../utils/dateFormatter';
+import { formatDateID, formatCleanAddress, formatDateDDMMYYYY } from '../utils/dateFormatter';
 
 interface PrintPreviewModalProps {
   isOpen: boolean;
@@ -613,7 +613,7 @@ export default function PrintPreviewModal({
                           </thead>
                           <tbody>
                             <tr>
-                              <td className="uppercase">{letterData.assigneeName}</td>
+                              <td className="uppercase">{letterData.assigneeName || '....................................'}</td>
                               <td>{letterData.assigneePosition}</td>
                             </tr>
                           </tbody>
@@ -637,7 +637,7 @@ export default function PrintPreviewModal({
                           <div>Alamat</div><div>:</div><div className="uppercase">{formatCleanAddress(letterData.customerAddress)}</div>
                         </div>
                         <div className="grid grid-cols-[180px_10px_1fr]">
-                          <div>Tanggal Jatuh Tempo</div><div>:</div><div className="uppercase">{formatDateID(letterData.customerDueDate)}</div>
+                          <div>Tanggal Jatuh Tempo</div><div>:</div><div>{formatDateDDMMYYYY(letterData.customerDueDate)}</div>
                         </div>
                         <div className="grid grid-cols-[180px_10px_1fr]">
                           <div>Angsuran</div><div>:</div><div>{letterData.customerInstallment}{letterData.customerTotalInstallment ? ` / ${letterData.customerTotalInstallment}` : ''}</div>
@@ -654,7 +654,7 @@ export default function PrintPreviewModal({
                           <div>Merk/Type</div><div>:</div><div className="uppercase">{letterData.vehicleBrand}</div>
                         </div>
                         <div className="grid grid-cols-[180px_10px_1fr]">
-                          <div>Nomor Polisi</div><div>:</div><div className="uppercase font-semibold">{letterData.vehiclePlate}</div>
+                          <div>Nomor Polisi</div><div>:</div><div className="uppercase font-bold">{letterData.vehiclePlate || 'R-1234-XX'}</div>
                         </div>
                       </div>
 
@@ -702,7 +702,7 @@ export default function PrintPreviewModal({
                         </div>
                         <div className="w-[260px]">
                           <p className="mb-8">{letterData.signPlaceDate}<br/>Penerima Tugas,<br/>PETUGAS PENAGIHAN</p>
-                          <p className="font-bold underline">{letterData.assigneeName}</p>
+                          <p className="font-bold underline">{letterData.assigneeName || '....................................'}</p>
                         </div>
                       </div>
                     </div>
@@ -743,7 +743,7 @@ export default function PrintPreviewModal({
                           key={idx}
                           src={att.url}
                           alt={`Lampiran ${idx + 1}`}
-                          style={{ width: `${att.width}px`, height: `${att.height}px` }}
+                          style={{ width: `${att.width || 600}px`, height: `${att.height || 270}px` }}
                           className="object-contain border-2 border-dashed border-[#D1D1CA] p-2"
                         />
                       ))}

@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { LetterData } from '../types';
 import { generateOfficialLetterNumber } from '../utils/letterNumber';
-import { formatDateID, formatCleanAddress } from '../utils/dateFormatter';
-import { Sparkles } from 'lucide-react';
+import { formatDateID, formatCleanAddress, formatDateDDMMYYYY, getTodaySignPlaceDate } from '../utils/dateFormatter';
+import { Sparkles, Calendar } from 'lucide-react';
 import { regionData } from '../data/regions';
 
 interface LetterFormProps {
@@ -67,6 +67,58 @@ export default function LetterForm({ data, onChange }: LetterFormProps) {
     onChange(newData);
   };
 
+  const handleDueDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    let val = e.target.value;
+    // Allow digits and /
+    val = val.replace(/[^\d/]/g, '');
+    const digits = val.replace(/\D/g, '');
+    if (digits.length > 2 && digits.length <= 4 && !val.includes('/')) {
+      val = `${digits.slice(0, 2)}/${digits.slice(2)}`;
+    } else if (digits.length > 4 && val.split('/').length <= 2) {
+      val = `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4, 8)}`;
+    }
+    onChange({ ...data, customerDueDate: val });
+  };
+
+  // Derive make and model for Data Kendaraan
+  const currentMake = data.vehicleBrandMake ?? (
+    data.vehicleBrand?.toUpperCase().startsWith('HONDA') ? 'HONDA' :
+    data.vehicleBrand?.toUpperCase().startsWith('YAMAHA') ? 'YAMAHA' :
+    data.vehicleBrand?.toUpperCase().startsWith('SUZUKI') ? 'SUZUKI' : ''
+  );
+
+  const currentModel = data.vehicleBrandModel ?? (
+    data.vehicleBrand?.includes('/')
+      ? data.vehicleBrand.split('/')[1]?.trim()
+      : (currentMake && data.vehicleBrand?.toUpperCase().startsWith(currentMake)
+          ? data.vehicleBrand.slice(currentMake.length).trim().replace(/^[\/\-\s]+/, '')
+          : (currentMake ? '' : data.vehicleBrand || ''))
+  );
+
+  const handleVehicleMakeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const make = e.target.value;
+    const model = currentModel;
+    const combined = make && model ? `${make} / ${model}` : (make || model);
+    onChange({
+      ...data,
+      vehicleBrandMake: make,
+      vehicleBrandModel: model,
+      vehicleBrand: combined,
+    });
+  };
+
+  const handleVehicleModelChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const model = e.target.value;
+    const make = currentMake;
+    const combined = make && model ? `${make} / ${model}` : (make || model);
+    onChange({
+      ...data,
+      vehicleBrandMake: make,
+      vehicleBrandModel: model,
+      vehicleBrand: combined,
+    });
+  };
+
   const handleGenerateLetterNumber = () => {
     onChange({
       ...data,
@@ -98,7 +150,7 @@ export default function LetterForm({ data, onChange }: LetterFormProps) {
     Array.from(files).forEach((file: File) => {
       const reader = new FileReader();
       reader.onloadend = () => {
-        newAttachments.push({ url: reader.result as string, width: 600, height: 400 });
+        newAttachments.push({ url: reader.result as string, width: 600, height: 270 });
         processed++;
         if (processed === files.length) {
           onChange({ ...data, attachments: [...(data.attachments || []), ...newAttachments] });
@@ -106,6 +158,12 @@ export default function LetterForm({ data, onChange }: LetterFormProps) {
       };
       reader.readAsDataURL(file);
     });
+  };
+
+  const resetAllAttachmentsToDefault = () => {
+    if (!data.attachments || data.attachments.length === 0) return;
+    const updated = data.attachments.map(att => ({ ...att, width: 600, height: 270 }));
+    onChange({ ...data, attachments: updated });
   };
 
   const removeAttachment = (index: number) => {
@@ -213,8 +271,25 @@ export default function LetterForm({ data, onChange }: LetterFormProps) {
               </p>
             </div>
             <div>
-              <label className={labelClass}>Tempat & Tanggal (Tanda Tangan)</label>
-              <input type="text" name="signPlaceDate" value={data.signPlaceDate} onChange={handleChange} className={inputClass} />
+              <div className="flex items-center justify-between mb-1">
+                <label className={labelClass}>Tempat & Tanggal (Tanda Tangan)</label>
+                <button
+                  type="button"
+                  onClick={() => onChange({ ...data, signPlaceDate: getTodaySignPlaceDate('Purwokerto') })}
+                  className="text-[10px] text-[#5A5A40] hover:underline font-bold cursor-pointer"
+                  title="Klik untuk mengisi tanggal hari ini"
+                >
+                  Set Purwokerto Hari Ini
+                </button>
+              </div>
+              <input 
+                type="text" 
+                name="signPlaceDate" 
+                value={data.signPlaceDate} 
+                onChange={handleChange} 
+                className={inputClass} 
+                placeholder="Contoh: Purwokerto, 19 September 2026"
+              />
             </div>
           </div>
         </section>
@@ -247,7 +322,14 @@ export default function LetterForm({ data, onChange }: LetterFormProps) {
             <div className="space-y-2">
               <div>
                 <label className={labelClass}>Nama Petugas</label>
-                <input type="text" name="assigneeName" value={data.assigneeName} onChange={handleChange} className={inputClass} />
+                <input 
+                  type="text" 
+                  name="assigneeName" 
+                  value={data.assigneeName} 
+                  onChange={handleChange} 
+                  className={inputClass} 
+                  placeholder="Nama Lengkap Petugas"
+                />
               </div>
               <div>
                 <label className={labelClass}>Jabatan</label>
@@ -294,17 +376,38 @@ export default function LetterForm({ data, onChange }: LetterFormProps) {
               <div className="grid grid-cols-2 gap-2">
                 <div>
                   <label className={labelClass}>No. Kontrak</label>
-                  <input type="text" name="customerContract" value={data.customerContract} onChange={handleChange} className={inputClass} />
+                  <input 
+                    type="text" 
+                    name="customerContract" 
+                    value={data.customerContract} 
+                    onChange={handleChange} 
+                    className={inputClass} 
+                    placeholder="Nomor Kontrak Nasabah"
+                  />
                 </div>
                 <div>
                   <label className={labelClass}>Nama Nasabah</label>
-                  <input type="text" name="customerName" value={data.customerName} onChange={handleChange} className={inputClass} />
+                  <input 
+                    type="text" 
+                    name="customerName" 
+                    value={data.customerName} 
+                    onChange={handleChange} 
+                    className={inputClass} 
+                    placeholder="Nama Lengkap Nasabah"
+                  />
                 </div>
               </div>
               <div className="space-y-2 p-3 border border-slate-200 bg-slate-50/50 rounded-lg">
                 <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">Alamat Nasabah</label>
                 
-                <input type="text" name="customerAddressDetail" value={data.customerAddressDetail || ''} onChange={handleAddressChange} className={inputClass} placeholder="Jalan / RT / RW (Contoh: KALIKABONG RT 004 RW 002)" />
+                <input 
+                  type="text" 
+                  name="customerAddressDetail" 
+                  value={data.customerAddressDetail || ''} 
+                  onChange={handleAddressChange} 
+                  className={inputClass} 
+                  placeholder="Jalan / RT / RW (Ketik Manual)" 
+                />
                 
                 <div className="grid grid-cols-2 gap-2">
                   <div>
@@ -340,21 +443,45 @@ export default function LetterForm({ data, onChange }: LetterFormProps) {
                 )}
               </div>
               <div>
-                <label className={labelClass}>Jatuh Tempo</label>
-                <input type="date" name="customerDueDate" value={data.customerDueDate} onChange={handleChange} className={inputClass} />
+                <label className={labelClass}>Jatuh Tempo (DD/MM/YYYY)</label>
+                <div className="relative flex items-center">
+                  <input 
+                    type="text" 
+                    name="customerDueDate" 
+                    value={data.customerDueDate} 
+                    onChange={handleDueDateChange} 
+                    className={`${inputClass} pr-8`} 
+                    placeholder="DD/MM/YYYY (contoh: 25/09/2026)" 
+                  />
+                  <div className="absolute right-2 flex items-center justify-center pointer-events-auto">
+                    <input
+                      type="date"
+                      tabIndex={-1}
+                      className="absolute inset-0 opacity-0 w-6 h-6 cursor-pointer"
+                      title="Pilih tanggal dari kalender"
+                      onChange={(e) => {
+                        if (e.target.value) {
+                          const [y, m, d] = e.target.value.split('-');
+                          onChange({ ...data, customerDueDate: `${d}/${m}/${y}` });
+                        }
+                      }}
+                    />
+                    <Calendar size={14} className="text-slate-400 pointer-events-none" />
+                  </div>
+                </div>
               </div>
               <div className="grid grid-cols-3 gap-2">
                 <div>
                   <label className={labelClass}>Angsuran</label>
-                  <input type="text" name="customerInstallment" value={data.customerInstallment} onChange={handleChange} className={inputClass} placeholder="Rp 385.000" />
+                  <input type="text" name="customerInstallment" value={data.customerInstallment} onChange={handleChange} className={inputClass} placeholder="Contoh: Rp 385.000" />
                 </div>
                 <div>
                   <label className={labelClass}>Total Angsuran</label>
-                  <input type="text" name="customerTotalInstallment" value={data.customerTotalInstallment} onChange={handleChange} className={inputClass} placeholder="Rp 4.235.000" />
+                  <input type="text" name="customerTotalInstallment" value={data.customerTotalInstallment} onChange={handleChange} className={inputClass} placeholder="Contoh: Rp 4.235.000" />
                 </div>
                 <div>
                   <label className={labelClass}>Total Denda</label>
-                  <input type="text" name="customerPenalty" value={data.customerPenalty} onChange={handleChange} className={inputClass} placeholder="Rp 41.692.000" />
+                  <input type="text" name="customerPenalty" value={data.customerPenalty} onChange={handleChange} className={inputClass} placeholder="Contoh: Rp 41.692.000" />
                 </div>
               </div>
             </div>
@@ -364,25 +491,80 @@ export default function LetterForm({ data, onChange }: LetterFormProps) {
             <h2 className={headingClass}>
               <span>Data Kendaraan</span>
             </h2>
-            <div className="grid grid-cols-2 gap-2">
-              <div>
-                <label className={labelClass}>Merk / Tipe</label>
-                <input type="text" name="vehicleBrand" value={data.vehicleBrand} onChange={handleChange} className={inputClass} />
+            <div className="space-y-2">
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className={labelClass}>Merk</label>
+                  <select
+                    name="vehicleBrandMake"
+                    value={currentMake}
+                    onChange={handleVehicleMakeChange}
+                    className={inputClass}
+                  >
+                    <option value="">Pilih Merk...</option>
+                    <option value="HONDA">HONDA</option>
+                    <option value="YAMAHA">YAMAHA</option>
+                    <option value="SUZUKI">SUZUKI</option>
+                  </select>
+                </div>
+                <div>
+                  <label className={labelClass}>Tipe (Ketik Manual)</label>
+                  <input
+                    type="text"
+                    name="vehicleBrandModel"
+                    value={currentModel}
+                    onChange={handleVehicleModelChange}
+                    className={inputClass}
+                    placeholder="Contoh: VARIO 160 / BEAT"
+                  />
+                </div>
               </div>
+
+              {data.vehicleBrand && (
+                <p className="text-[11px] text-slate-500 font-mono">
+                  Merk/Tipe di Surat: <span className="font-bold uppercase text-slate-700">{data.vehicleBrand}</span>
+                </p>
+              )}
+
               <div>
                 <label className={labelClass}>Nomor Polisi</label>
-                <input type="text" name="vehiclePlate" value={data.vehiclePlate} onChange={handleChange} className={inputClass} />
+                <input
+                  type="text"
+                  name="vehiclePlate"
+                  value={data.vehiclePlate}
+                  onChange={handleChange}
+                  className={`${inputClass} font-bold tracking-wider`}
+                  placeholder="R-1234-XX"
+                />
               </div>
             </div>
           </section>
 
           <section className={sectionClass}>
-            <h2 className={headingClass}>
+            <div className={headingClass}>
               <span>Lampiran Foto Dokumen</span>
-            </h2>
+              {data.attachments && data.attachments.length > 0 && (
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] text-slate-500 font-normal">
+                    {data.attachments.length} Foto
+                  </span>
+                  <button
+                    type="button"
+                    onClick={resetAllAttachmentsToDefault}
+                    className="text-[9.5px] text-[#5A5A40] hover:underline font-bold cursor-pointer"
+                    title="Reset semua foto ke ukuran default 600 × 270 px"
+                  >
+                    Reset Ukuran (600×270)
+                  </button>
+                </div>
+              )}
+            </div>
             <div className="space-y-2">
               <div>
-                <label className={labelClass}>Upload Foto (KTP, STNK, Unit, dll)</label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className={labelClass}>Upload Foto (KTP, STNK, Unit, dll)</label>
+                  <span className="text-[9.5px] text-slate-500 font-medium">Default: 600 × 270 px</span>
+                </div>
                 <input 
                   type="file" 
                   accept="image/*" 
@@ -395,16 +577,50 @@ export default function LetterForm({ data, onChange }: LetterFormProps) {
                 <div className="grid grid-cols-1 gap-2 mt-2">
                   {data.attachments.map((att, idx) => (
                     <div key={idx} className="relative border border-slate-200 p-2 rounded-lg bg-slate-50">
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-[10px] font-bold text-slate-700">Foto {idx + 1}</span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            updateAttachmentDimension(idx, 'width', 600);
+                            updateAttachmentDimension(idx, 'height', 270);
+                          }}
+                          className="text-[9px] text-[#5A5A40] hover:underline font-semibold cursor-pointer mr-6"
+                          title="Kembalikan ke ukuran standar 600 × 270 px"
+                        >
+                          Reset 600×270 px
+                        </button>
+                      </div>
                       <img src={att.url} alt={`Preview ${idx}`} className="w-full h-24 object-contain bg-white rounded border border-slate-200 mb-1.5" />
                       
                       <div className="grid grid-cols-2 gap-2">
                         <div>
-                          <label className="block text-[9px] font-bold text-slate-600">Lebar: {att.width}px</label>
-                          <input type="range" min="100" max="800" value={att.width} onChange={(e) => updateAttachmentDimension(idx, 'width', Number(e.target.value))} className="w-full accent-[#5A5A40]" />
+                          <div className="flex items-center justify-between mb-0.5">
+                            <label className="block text-[9px] font-bold text-slate-600">Lebar: {att.width || 600}px</label>
+                            <button
+                              type="button"
+                              onClick={() => updateAttachmentDimension(idx, 'width', 600)}
+                              className="text-[8.5px] text-[#5A5A40] hover:underline font-semibold cursor-pointer"
+                              title="Set lebar ke 600px"
+                            >
+                              600px
+                            </button>
+                          </div>
+                          <input type="range" min="100" max="800" value={att.width || 600} onChange={(e) => updateAttachmentDimension(idx, 'width', Number(e.target.value))} className="w-full accent-[#5A5A40]" />
                         </div>
                         <div>
-                          <label className="block text-[9px] font-bold text-slate-600">Tinggi: {att.height}px</label>
-                          <input type="range" min="100" max="800" value={att.height} onChange={(e) => updateAttachmentDimension(idx, 'height', Number(e.target.value))} className="w-full accent-[#5A5A40]" />
+                          <div className="flex items-center justify-between mb-0.5">
+                            <label className="block text-[9px] font-bold text-slate-600">Tinggi: {att.height || 270}px</label>
+                            <button
+                              type="button"
+                              onClick={() => updateAttachmentDimension(idx, 'height', 270)}
+                              className="text-[8.5px] text-[#5A5A40] hover:underline font-semibold cursor-pointer"
+                              title="Set tinggi ke 270px"
+                            >
+                              270px
+                            </button>
+                          </div>
+                          <input type="range" min="100" max="800" value={att.height || 270} onChange={(e) => updateAttachmentDimension(idx, 'height', Number(e.target.value))} className="w-full accent-[#5A5A40]" />
                         </div>
                       </div>
 

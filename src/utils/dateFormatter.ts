@@ -12,6 +12,34 @@ export const formatDateID = (dateString: string): string => {
   return dateString;
 };
 
+export const formatDateDDMMYYYY = (dateString: string): string => {
+  if (!dateString) return '';
+  const trimmed = dateString.trim();
+  // If already DD/MM/YYYY or D/M/YYYY
+  if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(trimmed)) {
+    const [d, m, y] = trimmed.split('/');
+    return `${d.padStart(2, '0')}/${m.padStart(2, '0')}/${y}`;
+  }
+  // If YYYY-MM-DD
+  if (/^\d{4}-\d{1,2}-\d{1,2}$/.test(trimmed)) {
+    const [y, m, d] = trimmed.split('-');
+    return `${d.padStart(2, '0')}/${m.padStart(2, '0')}/${y}`;
+  }
+  return trimmed;
+};
+
+export const getTodaySignPlaceDate = (city = 'Purwokerto'): string => {
+  const now = new Date();
+  const months = [
+    'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+    'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+  ];
+  const day = now.getDate();
+  const month = months[now.getMonth()];
+  const year = now.getFullYear();
+  return `${city}, ${day} ${month} ${year}`;
+};
+
 export const formatCleanAddress = (address: string): string => {
   if (!address) return '';
   return address
@@ -20,3 +48,4 @@ export const formatCleanAddress = (address: string): string => {
     .trim()
     .replace(/,\s*$/, '');
 };
+

@@ -7,6 +7,7 @@ import PrintPreviewModal from './components/PrintPreviewModal';
 import { LetterData, BastData, PaperSize, DEFAULT_PAPER_SIZE, PAPER_SIZES } from './types';
 import { FileText, ClipboardCheck, UploadCloud, Printer, Eye } from 'lucide-react';
 import { generateLetterNumber } from './utils/letterNumber';
+import { getTodaySignPlaceDate } from './utils/dateFormatter';
 import { CONTOH_RODA4, syncChecklist } from './data/defaults';
 
 type DocumentType = 'surat_tugas' | 'bast';
@@ -23,27 +24,29 @@ const initialData: LetterData = {
   letterNumber: generateLetterNumber(),
   assignerName: 'FILEMO HALAWA',
   assignerPosition: 'DIREKTUR',
-  assigneeName: 'RIZKY JUANDA SAPUTRA',
+  assigneeName: '',
   assigneePosition: 'Petugas Penagihan',
   clientName: 'Koperasi Anugrah Mega Mandiri (KAMM)',
-  customerContract: '00730191',
-  customerName: 'KISNO ANGKAH TRI HIDAYAT',
-  customerAddress: 'KALIKABONG RT 004 RW 002, KEL. KALIKABONG, KEC. KALIMANAH',
-  customerAddressDetail: 'KALIKABONG RT 004 RW 002',
-  customerKabupaten: 'PURBALINGGA',
-  customerKecamatan: 'KALIMANAH',
-  customerKelurahan: 'KALIKABONG',
-  customerDueDate: '2024-02-02',
-  customerInstallment: 'Rp 385.000',
-  customerTotalInstallment: 'Rp 4.235.000',
-  customerUnpaidInstallmentCount: '10 Bulan',
-  customerPenalty: 'Rp 41.692.000',
+  customerContract: '',
+  customerName: '',
+  customerAddress: '',
+  customerAddressDetail: '',
+  customerKabupaten: '',
+  customerKecamatan: '',
+  customerKelurahan: '',
+  customerDueDate: '',
+  customerInstallment: '',
+  customerTotalInstallment: '',
+  customerUnpaidInstallmentCount: '',
+  customerPenalty: '',
   attachments: [],
-  vehicleBrand: 'YAMAHA / VIXION',
-  vehiclePlate: 'R4088YV',
+  vehicleBrand: 'HONDA',
+  vehicleBrandMake: 'HONDA',
+  vehicleBrandModel: '',
+  vehiclePlate: 'R-1234-XX',
   validFrom: '2026-08-21',
   validTo: '2026-08-31',
-  signPlaceDate: 'Purwokerto, 22 Agustus 2026'
+  signPlaceDate: getTodaySignPlaceDate('Purwokerto')
 };
 
 const STORAGE_KEY_BAST = 'bast-generator-v1';

@@ -3,7 +3,7 @@ import { LetterData, PaperSize, PAPER_SIZES } from '../types';
 import { FileDown, Loader2, UploadCloud, Printer, Eye, ChevronDown } from 'lucide-react';
 import jsPDF from 'jspdf';
 import { toJpeg } from 'html-to-image';
-import { formatDateID, formatCleanAddress } from '../utils/dateFormatter';
+import { formatDateID, formatCleanAddress, formatDateDDMMYYYY } from '../utils/dateFormatter';
 
 interface LetterPreviewProps {
   data: LetterData;
@@ -243,7 +243,7 @@ export default function LetterPreview({
                 </thead>
                 <tbody>
                   <tr>
-                    <td className="uppercase">{data.assigneeName}</td>
+                    <td className="uppercase">{data.assigneeName || '....................................'}</td>
                     <td>{data.assigneePosition}</td>
                   </tr>
                 </tbody>
@@ -267,7 +267,7 @@ export default function LetterPreview({
                 <div>Alamat</div><div>:</div><div className="uppercase">{formatCleanAddress(data.customerAddress)}</div>
               </div>
               <div className="grid grid-cols-[180px_10px_1fr]">
-                <div>Tanggal Jatuh Tempo</div><div>:</div><div className="uppercase">{formatDateID(data.customerDueDate)}</div>
+                <div>Tanggal Jatuh Tempo</div><div>:</div><div>{formatDateDDMMYYYY(data.customerDueDate)}</div>
               </div>
               <div className="grid grid-cols-[180px_10px_1fr]">
                 <div>Angsuran</div><div>:</div><div>{data.customerInstallment}{data.customerTotalInstallment ? ` / ${data.customerTotalInstallment}` : ''}</div>
@@ -284,7 +284,7 @@ export default function LetterPreview({
                 <div>Merk/Type</div><div>:</div><div className="uppercase">{data.vehicleBrand}</div>
               </div>
               <div className="grid grid-cols-[180px_10px_1fr]">
-                <div>Nomor Polisi</div><div>:</div><div className="uppercase font-semibold">{data.vehiclePlate}</div>
+                <div>Nomor Polisi</div><div>:</div><div className="uppercase font-bold">{data.vehiclePlate || 'R-1234-XX'}</div>
               </div>
             </div>
 
@@ -333,7 +333,7 @@ export default function LetterPreview({
               </div>
               <div className="w-[260px]">
                 <p className="mb-8">{data.signPlaceDate}<br/>Penerima Tugas,<br/>PETUGAS PENAGIHAN</p>
-                <p className="font-bold underline">{data.assigneeName}</p>
+                <p className="font-bold underline">{data.assigneeName || '....................................'}</p>
               </div>
             </div>
 
@@ -362,7 +362,7 @@ export default function LetterPreview({
                   key={idx} 
                   src={att.url} 
                   alt={`Lampiran ${idx + 1}`} 
-                  style={{ width: `${att.width}px`, height: `${att.height}px` }}
+                  style={{ width: `${att.width || 600}px`, height: `${att.height || 270}px` }}
                   className="object-contain border-2 border-dashed border-[#D1D1CA] p-2" 
                 />
               ))}
