@@ -1,7 +1,9 @@
 export interface AttachmentData {
   url: string;
+  originalUrl?: string;
   width: number;
   height: number;
+  cropped?: boolean;
 }
 
 export type PaperSize = 'f4' | 'a4' | 'legal' | 'letter';

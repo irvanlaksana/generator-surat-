@@ -1,9 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { LetterData } from '../types';
+import { LetterData, AttachmentData } from '../types';
 import { generateOfficialLetterNumber } from '../utils/letterNumber';
 import { formatDateID, formatCleanAddress, formatDateDDMMYYYY, getTodaySignPlaceDate } from '../utils/dateFormatter';
-import { Sparkles, Calendar } from 'lucide-react';
+import { Sparkles, Calendar, Scissors, SlidersHorizontal, Loader2, Undo2, Check, Save, RotateCcw, Image as ImageIcon } from 'lucide-react';
 import { regionData } from '../data/regions';
+import { autoCropDocumentImage } from '../utils/imageAutoCrop';
+import ImageCropModal from './ImageCropModal';
+import { getSavedKopTemplate, saveKopTemplate } from '../utils/kopStorage';
 
 interface LetterFormProps {
   data: LetterData;
@@ -129,35 +132,156 @@ export default function LetterForm({ data, onChange }: LetterFormProps) {
     });
   };
 
+  const [savedKopSuccess, setSavedKopSuccess] = useState<boolean>(false);
+
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       const reader = new FileReader();
       reader.onloadend = () => {
-        onChange({ ...data, kopImage: reader.result as string });
+        const url = reader.result as string;
+        const updated = { ...data, kopImage: url };
+        onChange(updated);
+        saveKopTemplate(updated);
+        setSavedKopSuccess(true);
+        setTimeout(() => setSavedKopSuccess(false), 2500);
       };
       reader.readAsDataURL(file);
     }
   };
 
-  const handleAttachmentUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files) return;
-    
-    let processed = 0;
-    const newAttachments: { url: string, width: number, height: number }[] = [];
-    
-    Array.from(files).forEach((file: File) => {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        newAttachments.push({ url: reader.result as string, width: 600, height: 270 });
-        processed++;
-        if (processed === files.length) {
-          onChange({ ...data, attachments: [...(data.attachments || []), ...newAttachments] });
-        }
-      };
-      reader.readAsDataURL(file);
+  const handleSaveAsDefaultKop = () => {
+    saveKopTemplate(data);
+    setSavedKopSuccess(true);
+    setTimeout(() => setSavedKopSuccess(false), 3000);
+  };
+
+  const handleRestoreSavedKop = () => {
+    const saved = getSavedKopTemplate();
+    if (saved && saved.kopImage) {
+      onChange({
+        ...data,
+        kopImage: saved.kopImage,
+        kopImageHeight: saved.kopImageHeight,
+        kopImageFit: saved.kopImageFit,
+        kopImageAlign: saved.kopImageAlign,
+        kopImageOffsetY: saved.kopImageOffsetY,
+        kopImageOffsetX: saved.kopImageOffsetX,
+        kopImageMarginBottom: saved.kopImageMarginBottom,
+        kopCompanyName: saved.kopCompanyName || data.kopCompanyName,
+      });
+      setSavedKopSuccess(true);
+      setTimeout(() => setSavedKopSuccess(false), 2500);
+    }
+  };
+
+  const handleResetKopPosition = () => {
+    onChange({
+      ...data,
+      kopImageHeight: 120,
+      kopImageOffsetY: 0,
+      kopImageOffsetX: 0,
+      kopImageMarginBottom: 32,
+      kopImageFit: 'contain',
+      kopImageAlign: 'center',
     });
+  };
+
+  const [autoCropOnUpload, setAutoCropOnUpload] = useState<boolean>(true);
+  const [isProcessingAttachments, setIsProcessingAttachments] = useState<boolean>(false);
+  const [activeCropIndex, setActiveCropIndex] = useState<number | null>(null);
+  const [singleCropLoading, setSingleCropLoading] = useState<number | null>(null);
+
+  const handleAttachmentUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    
+    setIsProcessingAttachments(true);
+    const fileList = Array.from(files) as File[];
+    const newAttachments: AttachmentData[] = [];
+    
+    for (const file of fileList) {
+      try {
+        const rawDataUrl = await new Promise<string>((resolve) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result as string);
+          reader.readAsDataURL(file);
+        });
+
+        if (autoCropOnUpload) {
+          const cropRes = await autoCropDocumentImage(rawDataUrl, { sensitivity: 'medium' });
+          if (cropRes.didCrop) {
+            newAttachments.push({
+              url: cropRes.url,
+              originalUrl: rawDataUrl,
+              width: 600,
+              height: 270,
+              cropped: true,
+            });
+          } else {
+            newAttachments.push({
+              url: rawDataUrl,
+              originalUrl: rawDataUrl,
+              width: 600,
+              height: 270,
+              cropped: false,
+            });
+          }
+        } else {
+          newAttachments.push({
+            url: rawDataUrl,
+            originalUrl: rawDataUrl,
+            width: 600,
+            height: 270,
+            cropped: false,
+          });
+        }
+      } catch (err) {
+        console.error('Error processing attachment:', err);
+      }
+    }
+
+    onChange({ ...data, attachments: [...(data.attachments || []), ...newAttachments] });
+    setIsProcessingAttachments(false);
+    e.target.value = '';
+  };
+
+  const handleAutoCropSingle = async (index: number) => {
+    const att = data.attachments?.[index];
+    if (!att) return;
+    setSingleCropLoading(index);
+    try {
+      const base = att.originalUrl || att.url;
+      const cropRes = await autoCropDocumentImage(base, { sensitivity: 'medium' });
+      const newAttachments = [...(data.attachments || [])];
+      if (cropRes.didCrop) {
+        newAttachments[index] = {
+          ...att,
+          url: cropRes.url,
+          originalUrl: base,
+          cropped: true,
+        };
+      } else {
+        alert('Tepi dokumen sudah optimal atau kontras background sudah pas.');
+      }
+      onChange({ ...data, attachments: newAttachments });
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setSingleCropLoading(null);
+    }
+  };
+
+  const handleRestoreOriginal = (index: number) => {
+    const att = data.attachments?.[index];
+    if (!att || !att.originalUrl) return;
+    const newAttachments = [...(data.attachments || [])];
+    newAttachments[index] = {
+      ...att,
+      url: att.originalUrl,
+      cropped: false,
+    };
+    onChange({ ...data, attachments: newAttachments });
   };
 
   const resetAllAttachmentsToDefault = () => {
@@ -542,7 +666,10 @@ export default function LetterForm({ data, onChange }: LetterFormProps) {
 
           <section className={sectionClass}>
             <div className={headingClass}>
-              <span>Lampiran Foto Dokumen</span>
+              <div className="flex items-center gap-1.5">
+                <Scissors className="w-3.5 h-3.5 text-[#5A5A40]" />
+                <span>Lampiran Foto Dokumen</span>
+              </div>
               {data.attachments && data.attachments.length > 0 && (
                 <div className="flex items-center gap-2">
                   <span className="text-[10px] text-slate-500 font-normal">
@@ -559,10 +686,29 @@ export default function LetterForm({ data, onChange }: LetterFormProps) {
                 </div>
               )}
             </div>
-            <div className="space-y-2">
+            <div className="space-y-2.5">
+              {/* Auto Crop Toggle */}
+              <div className="flex items-center justify-between p-2 bg-slate-50 rounded-lg border border-slate-200">
+                <label className="flex items-center gap-2 cursor-pointer text-xs font-semibold text-slate-700 select-none">
+                  <input
+                    type="checkbox"
+                    checked={autoCropOnUpload}
+                    onChange={(e) => setAutoCropOnUpload(e.target.checked)}
+                    className="rounded text-[#5A5A40] focus:ring-[#5A5A40] accent-[#5A5A40] w-3.5 h-3.5 cursor-pointer"
+                  />
+                  <span className="flex items-center gap-1">
+                    <Scissors className="w-3 h-3 text-[#5A5A40]" />
+                    <span>Auto-Crop latar belakang saat upload</span>
+                  </span>
+                </label>
+                <span className="text-[10px] text-slate-500 font-medium hidden sm:inline">
+                  Potong meja/lantai/tepi tak penting
+                </span>
+              </div>
+
               <div>
                 <div className="flex items-center justify-between mb-1">
-                  <label className={labelClass}>Upload Foto (KTP, STNK, Unit, dll)</label>
+                  <label className={labelClass}>Upload Foto (KTP, STNK, Unit, Berkas dll)</label>
                   <span className="text-[9.5px] text-slate-500 font-medium">Default: 600 × 270 px</span>
                 </div>
                 <input 
@@ -570,15 +716,37 @@ export default function LetterForm({ data, onChange }: LetterFormProps) {
                   accept="image/*" 
                   multiple
                   onChange={handleAttachmentUpload} 
-                  className="w-full text-xs text-slate-600 file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-[11px] file:font-bold file:bg-[#5A5A40] file:text-white hover:file:bg-[#484833] transition cursor-pointer" 
+                  disabled={isProcessingAttachments}
+                  className="w-full text-xs text-slate-600 file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-[11px] file:font-bold file:bg-[#5A5A40] file:text-white hover:file:bg-[#484833] transition cursor-pointer disabled:opacity-50" 
                 />
               </div>
+
+              {/* Processing Loader */}
+              {isProcessingAttachments && (
+                <div className="flex items-center justify-center gap-2 py-2 px-3 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-800 font-semibold animate-pulse">
+                  <Loader2 className="w-4 h-4 animate-spin text-[#5A5A40]" />
+                  <span>Sedang memotong background foto dokumen otomatis...</span>
+                </div>
+              )}
+
               {(data.attachments && data.attachments.length > 0) && (
-                <div className="grid grid-cols-1 gap-2 mt-2">
+                <div className="grid grid-cols-1 gap-2.5 mt-2">
                   {data.attachments.map((att, idx) => (
-                    <div key={idx} className="relative border border-slate-200 p-2 rounded-lg bg-slate-50">
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="text-[10px] font-bold text-slate-700">Foto {idx + 1}</span>
+                    <div key={idx} className="relative border border-slate-200 p-2.5 rounded-xl bg-slate-50 shadow-2xs">
+                      <div className="flex items-center justify-between mb-1.5">
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10.5px] font-bold text-slate-800">Foto {idx + 1}</span>
+                          {att.cropped ? (
+                            <span className="text-[9px] bg-emerald-100 text-emerald-800 font-bold px-1.5 py-0.5 rounded flex items-center gap-1 border border-emerald-200">
+                              <Check className="w-2.5 h-2.5" />
+                              <span>Background Terpotong</span>
+                            </span>
+                          ) : (
+                            <span className="text-[9px] bg-slate-200 text-slate-600 font-medium px-1.5 py-0.5 rounded">
+                              Foto Asli
+                            </span>
+                          )}
+                        </div>
                         <button
                           type="button"
                           onClick={() => {
@@ -591,8 +759,57 @@ export default function LetterForm({ data, onChange }: LetterFormProps) {
                           Reset 600×270 px
                         </button>
                       </div>
-                      <img src={att.url} alt={`Preview ${idx}`} className="w-full h-24 object-contain bg-white rounded border border-slate-200 mb-1.5" />
+
+                      {/* Image Preview & Quick Actions */}
+                      <div className="relative mb-2 group">
+                        <img 
+                          src={att.url} 
+                          alt={`Preview ${idx + 1}`} 
+                          className="w-full h-28 object-contain bg-white rounded-lg border border-slate-200" 
+                        />
+                      </div>
+
+                      {/* Crop Action Buttons */}
+                      <div className="flex flex-wrap items-center gap-1.5 mb-2.5 pb-2 border-b border-slate-200">
+                        <button
+                          type="button"
+                          onClick={() => setActiveCropIndex(idx)}
+                          className="px-2 py-1 bg-white hover:bg-slate-100 border border-slate-200 rounded-md text-[10px] font-bold text-slate-700 flex items-center gap-1 shadow-2xs cursor-pointer transition-colors"
+                          title="Sesuaikan tepi atau potong manual"
+                        >
+                          <SlidersHorizontal className="w-3 h-3 text-[#5A5A40]" />
+                          <span>Sesuaikan Potongan</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => handleAutoCropSingle(idx)}
+                          disabled={singleCropLoading === idx}
+                          className="px-2 py-1 bg-white hover:bg-slate-100 border border-slate-200 rounded-md text-[10px] font-bold text-[#5A5A40] flex items-center gap-1 shadow-2xs cursor-pointer transition-colors disabled:opacity-50"
+                          title="Deteksi dan potong ulang background secara otomatis"
+                        >
+                          {singleCropLoading === idx ? (
+                            <Loader2 className="w-3 h-3 animate-spin" />
+                          ) : (
+                            <Scissors className="w-3 h-3" />
+                          )}
+                          <span>Auto-Crop Ulang</span>
+                        </button>
+
+                        {att.originalUrl && (att.cropped || att.url !== att.originalUrl) && (
+                          <button
+                            type="button"
+                            onClick={() => handleRestoreOriginal(idx)}
+                            className="px-2 py-1 bg-white hover:bg-slate-100 border border-slate-200 rounded-md text-[10px] font-bold text-slate-600 flex items-center gap-1 shadow-2xs cursor-pointer transition-colors ml-auto"
+                            title="Kembalikan foto awal tanpa terpotong"
+                          >
+                            <Undo2 className="w-3 h-3 text-slate-500" />
+                            <span>Foto Asli</span>
+                          </button>
+                        )}
+                      </div>
                       
+                      {/* Dimension sliders */}
                       <div className="grid grid-cols-2 gap-2">
                         <div>
                           <div className="flex items-center justify-between mb-0.5">
@@ -626,7 +843,7 @@ export default function LetterForm({ data, onChange }: LetterFormProps) {
 
                       <button 
                         onClick={() => removeAttachment(idx)}
-                        className="absolute top-1.5 right-1.5 bg-rose-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-[10px] font-bold shadow hover:bg-rose-700 transition cursor-pointer"
+                        className="absolute top-2 right-2 bg-rose-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-[10px] font-bold shadow hover:bg-rose-700 transition cursor-pointer"
                         title="Hapus foto"
                       >
                         ✕
@@ -644,72 +861,183 @@ export default function LetterForm({ data, onChange }: LetterFormProps) {
       {(activeCategory === 'semua' || activeCategory === 'kop') && (
         <>
           <section className={sectionClass}>
-            <h2 className={headingClass}>
-              <span>Kop Surat & Perusahaan</span>
-            </h2>
-            <div className="space-y-2">
+            <div className={headingClass}>
+              <div className="flex items-center gap-1.5">
+                <ImageIcon className="w-3.5 h-3.5 text-[#5A5A40]" />
+                <span>Kop Surat & Perusahaan</span>
+              </div>
+              {data.kopImage && (
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={handleSaveAsDefaultKop}
+                    className="text-[9.5px] text-[#5A5A40] hover:underline font-bold cursor-pointer flex items-center gap-0.5"
+                    title="Kunci gambar dan posisi kop saat ini sebagai template standar"
+                  >
+                    <Save className="w-3 h-3" />
+                    <span>Kunci Sebagai Standar</span>
+                  </button>
+                </div>
+              )}
+            </div>
+
+            <div className="space-y-2.5">
+              {/* Feedback Alert */}
+              {savedKopSuccess && (
+                <div className="text-[10.5px] bg-emerald-600 text-white font-bold py-1 px-2.5 rounded-lg text-center shadow-xs">
+                  ✓ Kop Surat & pengaturan posisi berhasil disimpan sebagai template standar permanen!
+                </div>
+              )}
+
+              {/* Status Banner when Kop is active */}
+              {data.kopImage ? (
+                <div className="flex flex-wrap items-center justify-between gap-2 p-2 bg-emerald-50 rounded-lg border border-emerald-200">
+                  <div className="flex items-center gap-1.5 text-[11px] font-semibold text-emerald-800">
+                    <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                    <span>Kop Surat aktif & posisi saat ini otomatis tersimpan.</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={handleSaveAsDefaultKop}
+                      className="px-2 py-1 bg-emerald-700 hover:bg-emerald-800 text-white rounded text-[10px] font-bold flex items-center gap-1 cursor-pointer transition shadow-2xs"
+                      title="Simpan gambar & koordinat kop saat ini agar selalu muncul sebagai bawaan"
+                    >
+                      <Save className="w-3 h-3" />
+                      <span>Kunci Standar</span>
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                getSavedKopTemplate()?.kopImage && (
+                  <div className="flex items-center justify-between p-2 bg-[#5A5A40]/10 rounded-lg border border-[#5A5A40]/20">
+                    <span className="text-[11px] text-slate-700 font-medium">Kop Surat template standar tersedia di memori.</span>
+                    <button
+                      type="button"
+                      onClick={handleRestoreSavedKop}
+                      className="px-2.5 py-1 bg-[#5A5A40] hover:bg-[#484833] text-white rounded text-[10.5px] font-bold flex items-center gap-1 cursor-pointer shadow-2xs"
+                    >
+                      <RotateCcw className="w-3 h-3" />
+                      <span>Terapkan Kop Standar</span>
+                    </button>
+                  </div>
+                )
+              )}
+
               <div>
                 <label className={labelClass}>Nama Perusahaan (Teks Surat)</label>
                 <input type="text" name="kopCompanyName" value={data.kopCompanyName} onChange={handleChange} className={inputClass} />
               </div>
+
               <div>
-                <label className={labelClass}>Upload Gambar Kop</label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className={labelClass}>Upload Gambar Kop Baru</label>
+                  {data.kopImage && (
+                    <span className="text-[9.5px] text-emerald-700 font-bold">Kop Sedang Digunakan</span>
+                  )}
+                </div>
                 <input 
                   type="file" 
                   accept="image/*" 
                   onChange={handleImageUpload} 
                   className="w-full text-xs text-slate-600 file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-[11px] file:font-bold file:bg-[#5A5A40] file:text-white hover:file:bg-[#484833] transition cursor-pointer" 
                 />
+                
                 {data.kopImage && (
-                  <div className="mt-2 space-y-2 p-2 bg-slate-50 rounded-lg border border-slate-200">
-                    <div className="flex items-center justify-between border-b border-slate-200 pb-1">
-                      <span className="text-[10px] font-bold text-slate-700">Pengaturan Kop</span>
+                  <div className="mt-2.5 space-y-2.5 p-2.5 bg-slate-50 rounded-xl border border-slate-200">
+                    <div className="flex items-center justify-between border-b border-slate-200 pb-1.5">
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10.5px] font-bold text-slate-800">Pengaturan Posisi Kop Surat</span>
+                        <button
+                          type="button"
+                          onClick={handleResetKopPosition}
+                          className="text-[9.5px] text-[#5A5A40] hover:underline font-semibold cursor-pointer"
+                          title="Kembalikan koordinat posisi ke standar (Tengah, Tinggi: 120px)"
+                        >
+                          Reset Posisi
+                        </button>
+                      </div>
                       <button
                         type="button"
-                        onClick={() => onChange({ ...data, kopImage: null })}
+                        onClick={() => {
+                          const updated = { ...data, kopImage: null };
+                          onChange(updated);
+                          saveKopTemplate(updated);
+                        }}
                         className="text-[10px] text-rose-600 font-bold hover:underline cursor-pointer"
                       >
                         Hapus Kop
                       </button>
                     </div>
+
+                    {/* Live Preview Thumbnail */}
+                    <div className="bg-white p-2 rounded-lg border border-slate-200 text-center overflow-hidden">
+                      <img 
+                        src={data.kopImage} 
+                        alt="Preview Kop" 
+                        style={{
+                          height: `${Math.min(data.kopImageHeight, 90)}px`,
+                          objectFit: data.kopImageFit,
+                          objectPosition: data.kopImageAlign,
+                          marginLeft: data.kopImageAlign === 'left' ? 0 : data.kopImageAlign === 'right' ? 'auto' : 'auto',
+                          marginRight: data.kopImageAlign === 'right' ? 0 : data.kopImageAlign === 'left' ? 'auto' : 'auto',
+                        }}
+                        className="max-w-full"
+                      />
+                      <p className="text-[9px] text-slate-400 mt-1">
+                        Posisi: {data.kopImageAlign} | Tinggi: {data.kopImageHeight}px | Geser: X={data.kopImageOffsetX}px, Y={data.kopImageOffsetY}px | Jarak Bawah: {data.kopImageMarginBottom}px
+                      </p>
+                    </div>
                     
                     <div className="grid grid-cols-2 gap-2">
                       <div>
-                        <label className="block text-[9.5px] font-bold text-slate-600">Geser Kiri/Kanan: {data.kopImageOffsetX}px</label>
+                        <div className="flex items-center justify-between mb-0.5">
+                          <label className="block text-[9.5px] font-bold text-slate-600">Geser Kiri / Kanan</label>
+                          <span className="text-[9px] font-mono text-slate-500">{data.kopImageOffsetX || 0}px</span>
+                        </div>
                         <input type="range" min="-150" max="150" name="kopImageOffsetX" value={data.kopImageOffsetX} onChange={handleChange} className="w-full accent-[#5A5A40]" />
                       </div>
                       <div>
-                        <label className="block text-[9.5px] font-bold text-slate-600">Geser Atas/Bawah: {data.kopImageOffsetY}px</label>
+                        <div className="flex items-center justify-between mb-0.5">
+                          <label className="block text-[9.5px] font-bold text-slate-600">Geser Atas / Bawah</label>
+                          <span className="text-[9px] font-mono text-slate-500">{data.kopImageOffsetY || 0}px</span>
+                        </div>
                         <input type="range" min="-150" max="150" name="kopImageOffsetY" value={data.kopImageOffsetY} onChange={handleChange} className="w-full accent-[#5A5A40]" />
                       </div>
                     </div>
                     
                     <div className="grid grid-cols-2 gap-2">
                       <div>
-                        <label className="block text-[9.5px] font-bold text-slate-600">Tinggi: {data.kopImageHeight}px</label>
+                        <div className="flex items-center justify-between mb-0.5">
+                          <label className="block text-[9.5px] font-bold text-slate-600">Tinggi Gambar Kop</label>
+                          <span className="text-[9px] font-mono text-slate-500">{data.kopImageHeight}px</span>
+                        </div>
                         <input type="range" min="50" max="300" name="kopImageHeight" value={data.kopImageHeight} onChange={handleChange} className="w-full accent-[#5A5A40]" />
                       </div>
                       <div>
-                        <label className="block text-[9.5px] font-bold text-slate-600">Jarak Bawah (Spasi): {data.kopImageMarginBottom}px</label>
+                        <div className="flex items-center justify-between mb-0.5">
+                          <label className="block text-[9.5px] font-bold text-slate-600">Jarak Bawah (Spasi)</label>
+                          <span className="text-[9px] font-mono text-slate-500">{data.kopImageMarginBottom}px</span>
+                        </div>
                         <input type="range" min="-100" max="150" name="kopImageMarginBottom" value={data.kopImageMarginBottom} onChange={handleChange} className="w-full accent-[#5A5A40]" />
                       </div>
                     </div>
 
                     <div className="grid grid-cols-2 gap-2">
                       <div>
-                        <label className="block text-[9.5px] font-bold text-slate-600">Skala</label>
+                        <label className="block text-[9.5px] font-bold text-slate-600 mb-0.5">Skala / Tampilan</label>
                         <select name="kopImageFit" value={data.kopImageFit} onChange={handleChange} className={inputClass + " text-[11px] py-1"}>
-                          <option value="contain">Contain</option>
-                          <option value="fill">Fill</option>
-                          <option value="cover">Cover</option>
+                          <option value="contain">Contain (Proporsional Utuh)</option>
+                          <option value="fill">Fill (Isi Penuh)</option>
+                          <option value="cover">Cover (Potong Penuh)</option>
                         </select>
                       </div>
                       <div>
-                        <label className="block text-[9.5px] font-bold text-slate-600">Posisi</label>
+                        <label className="block text-[9.5px] font-bold text-slate-600 mb-0.5">Perataan Posisi</label>
                         <select name="kopImageAlign" value={data.kopImageAlign} onChange={handleChange} className={inputClass + " text-[11px] py-1"}>
-                          <option value="center">Tengah</option>
-                          <option value="left">Kiri</option>
-                          <option value="right">Kanan</option>
+                          <option value="center">Tengah (Center)</option>
+                          <option value="left">Rata Kiri (Left)</option>
+                          <option value="right">Rata Kanan (Right)</option>
                         </select>
                       </div>
                     </div>
@@ -719,6 +1047,25 @@ export default function LetterForm({ data, onChange }: LetterFormProps) {
             </div>
           </section>
         </>
+      )}
+      {/* Image Crop Modal */}
+      {activeCropIndex !== null && data.attachments?.[activeCropIndex] && (
+        <ImageCropModal
+          isOpen={true}
+          onClose={() => setActiveCropIndex(null)}
+          imageUrl={data.attachments[activeCropIndex].url}
+          originalUrl={data.attachments[activeCropIndex].originalUrl}
+          onSaveCrop={(croppedUrl) => {
+            const newAttachments = [...(data.attachments || [])];
+            newAttachments[activeCropIndex] = {
+              ...newAttachments[activeCropIndex],
+              url: croppedUrl,
+              cropped: true,
+            };
+            onChange({ ...data, attachments: newAttachments });
+          }}
+          onRestoreOriginal={() => handleRestoreOriginal(activeCropIndex)}
+        />
       )}
     </div>
   );

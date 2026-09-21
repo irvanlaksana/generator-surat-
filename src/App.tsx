@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import LetterForm from './components/LetterForm';
 import LetterPreview from './components/LetterPreview';
 import BastGenerator from './components/BastGenerator';
@@ -9,6 +9,7 @@ import { FileText, ClipboardCheck, UploadCloud, Printer, Eye } from 'lucide-reac
 import { generateLetterNumber } from './utils/letterNumber';
 import { getTodaySignPlaceDate } from './utils/dateFormatter';
 import { CONTOH_RODA4, syncChecklist } from './data/defaults';
+import { getSavedKopTemplate, saveKopTemplate, STORAGE_KEY_LETTER } from './utils/kopStorage';
 
 type DocumentType = 'surat_tugas' | 'bast';
 
@@ -51,6 +52,50 @@ const initialData: LetterData = {
 
 const STORAGE_KEY_BAST = 'bast-generator-v1';
 
+function loadInitialLetter(): LetterData {
+  let base: LetterData = { ...initialData };
+  try {
+    // 1. First overlay saved Kop Template (so user's preferred Kop image & position settings are guaranteed)
+    const savedKop = getSavedKopTemplate();
+    if (savedKop) {
+      base = {
+        ...base,
+        kopImage: savedKop.kopImage !== undefined ? savedKop.kopImage : base.kopImage,
+        kopImageHeight: savedKop.kopImageHeight !== undefined ? savedKop.kopImageHeight : base.kopImageHeight,
+        kopImageFit: savedKop.kopImageFit !== undefined ? savedKop.kopImageFit : base.kopImageFit,
+        kopImageAlign: savedKop.kopImageAlign !== undefined ? savedKop.kopImageAlign : base.kopImageAlign,
+        kopImageOffsetY: savedKop.kopImageOffsetY !== undefined ? savedKop.kopImageOffsetY : base.kopImageOffsetY,
+        kopImageOffsetX: savedKop.kopImageOffsetX !== undefined ? savedKop.kopImageOffsetX : base.kopImageOffsetX,
+        kopImageMarginBottom: savedKop.kopImageMarginBottom !== undefined ? savedKop.kopImageMarginBottom : base.kopImageMarginBottom,
+        kopCompanyName: savedKop.kopCompanyName !== undefined ? savedKop.kopCompanyName : base.kopCompanyName,
+      };
+    }
+
+    // 2. Then overlay last active letter session if available
+    const raw = localStorage.getItem(STORAGE_KEY_LETTER);
+    if (raw) {
+      const parsed = JSON.parse(raw) as Partial<LetterData>;
+      base = {
+        ...base,
+        ...parsed,
+      };
+      // Keep saved kop if parsed has null/empty kopImage but template had one
+      if (!base.kopImage && savedKop?.kopImage) {
+        base.kopImage = savedKop.kopImage;
+        base.kopImageHeight = savedKop.kopImageHeight ?? base.kopImageHeight;
+        base.kopImageFit = savedKop.kopImageFit ?? base.kopImageFit;
+        base.kopImageAlign = savedKop.kopImageAlign ?? base.kopImageAlign;
+        base.kopImageOffsetY = savedKop.kopImageOffsetY ?? base.kopImageOffsetY;
+        base.kopImageOffsetX = savedKop.kopImageOffsetX ?? base.kopImageOffsetX;
+        base.kopImageMarginBottom = savedKop.kopImageMarginBottom ?? base.kopImageMarginBottom;
+      }
+    }
+  } catch (err) {
+    console.error('Failed to load letter from localStorage:', err);
+  }
+  return base;
+}
+
 function loadInitialBast(): BastData {
   try {
     const raw = localStorage.getItem(STORAGE_KEY_BAST);
@@ -70,12 +115,28 @@ function loadInitialBast(): BastData {
 
 export default function App() {
   const [docType, setDocType] = useState<DocumentType>('surat_tugas');
-  const [data, setData] = useState<LetterData>(initialData);
+  const [data, setData] = useState<LetterData>(() => loadInitialLetter());
   const [bastData, setBastData] = useState<BastData>(() => loadInitialBast());
   const [paperSize, setPaperSize] = useState<PaperSize>(DEFAULT_PAPER_SIZE);
   const [activeTab, setActiveTab] = useState<'form' | 'preview'>('form');
   const [isDriveModalOpen, setIsDriveModalOpen] = useState(false);
   const [isPrintPreviewOpen, setIsPrintPreviewOpen] = useState(false);
+
+  // Debounced auto-save for LetterData and Kop Template
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      try {
+        localStorage.setItem(STORAGE_KEY_LETTER, JSON.stringify(data));
+        // Auto-save kop settings as template whenever kopImage or positioning is configured
+        if (data.kopImage) {
+          saveKopTemplate(data);
+        }
+      } catch (err) {
+        console.error('Failed to save letter to localStorage:', err);
+      }
+    }, 350);
+    return () => clearTimeout(timer);
+  }, [data]);
 
   const handleApplyToLetter = (partial: Partial<LetterData>) => {
     setData((prev) => ({
