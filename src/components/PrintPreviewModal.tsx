@@ -620,40 +620,29 @@ export default function PrintPreviewModal({
                         </table>
                       </div>
 
-                      <p>
-                        {letterData.penagihanType === 'perorangan' ? (
-                          <>
+                      {letterData.penagihanType === 'perorangan' ? (
+                        <>
+                          <p>
                             Untuk melakukan konfirmasi, penagihan, mediasi, dan negosiasi penyelesaian kewajiban pembayaran hutang/tagihan atas nama Debitur dari Pemberi Kuasa Perorangan: <strong>{letterData.clientName || '....................................'}</strong>
                             {letterData.krediturPeroranganNik ? ` (NIK: ${letterData.krediturPeroranganNik})` : ''}
                             {letterData.dasarPenagihan ? ` berdasarkan ${letterData.dasarPenagihan}` : ''} yang penagihannya dikuasakan kepada <strong>{letterData.kopCompanyName}</strong>.
-                          </>
-                        ) : (
-                          <>
-                            Untuk melakukan konfirmasi, penagihan, dan negosiasi penyelesaian kewajiban pembayaran atas nama Debitur/Nasabah dari <strong>{letterData.clientName || '....................................'}</strong>
-                            {letterData.dasarPenagihan ? ` berdasarkan ${letterData.dasarPenagihan}` : ''} yang penagihannya dikuasakan kepada <strong>{letterData.kopCompanyName}</strong>.
-                          </>
-                        )}
-                      </p>
+                          </p>
 
-                      <p className="mt-1.5 font-bold">Berikut rincian data nasabah & kewajiban tagihan :</p>
+                          <p className="mt-1.5 font-bold">Berikut rincian data debitur & besaran tagihan :</p>
 
-                      <div className="pl-6 space-y-0.5 mb-2 text-[9pt]">
-                        <div className="grid grid-cols-[180px_10px_1fr]">
-                          <div>{letterData.penagihanType === 'perorangan' ? 'No. Perjanjian / Bukti' : 'No. Kontrak'}</div><div>:</div><div className="font-mono">{letterData.customerContract || '-'}</div>
-                        </div>
-                        <div className="grid grid-cols-[180px_10px_1fr]">
-                          <div>Nama Debitur</div><div>:</div><div className="uppercase font-bold">{letterData.customerName}</div>
-                        </div>
-                        <div className="grid grid-cols-[180px_10px_1fr]">
-                          <div>Alamat</div><div>:</div><div className="uppercase">{formatCleanAddress(letterData.customerAddress)}</div>
-                        </div>
-                        <div className="grid grid-cols-[180px_10px_1fr]">
-                          <div>Tanggal Jatuh Tempo</div><div>:</div><div className="font-bold">{formatDueDate(letterData.customerDueDate)}</div>
-                        </div>
-
-                        {/* Rincian Besaran Tagihan */}
-                        {letterData.penagihanType === 'perorangan' || letterData.totalTagihan ? (
-                          <>
+                          <div className="pl-6 space-y-0.5 mb-2 text-[9pt]">
+                            <div className="grid grid-cols-[180px_10px_1fr]">
+                              <div>No. Perjanjian / Bukti</div><div>:</div><div className="font-mono">{letterData.customerContract || '-'}</div>
+                            </div>
+                            <div className="grid grid-cols-[180px_10px_1fr]">
+                              <div>Nama Debitur</div><div>:</div><div className="uppercase font-bold">{letterData.customerName}</div>
+                            </div>
+                            <div className="grid grid-cols-[180px_10px_1fr]">
+                              <div>Alamat</div><div>:</div><div className="uppercase">{formatCleanAddress(letterData.customerAddress)}</div>
+                            </div>
+                            <div className="grid grid-cols-[180px_10px_1fr]">
+                              <div>Tanggal Jatuh Tempo</div><div>:</div><div className="font-bold">{formatDueDate(letterData.customerDueDate)}</div>
+                            </div>
                             {letterData.besaranPokok && (
                               <div className="grid grid-cols-[180px_10px_1fr]">
                                 <div>Hutang Pokok</div><div>:</div><div>{letterData.besaranPokok}</div>
@@ -678,37 +667,69 @@ export default function PrintPreviewModal({
                                 <div className="italic font-medium text-[8.5pt]"># {letterData.terbilangTagihan} #</div>
                               </div>
                             )}
-                          </>
-                        ) : (
-                          <>
+                          </div>
+
+                          {/* Kronologi Singkat / Duduk Perkara (Khusus Perorangan) */}
+                          {letterData.kronologi && letterData.kronologi.trim() && (
+                            <div className="pl-6 mb-2 text-[9pt]">
+                              <div className="border-l-2 border-[#5A5A40] pl-2.5 py-1 bg-slate-50/70 rounded-r">
+                                <div className="font-bold text-[8.5pt] uppercase tracking-wide text-slate-800 mb-0.5">
+                                  Kronologi & Duduk Perkara :
+                                </div>
+                                <p className="text-[8.5pt] leading-normal text-justify whitespace-pre-line text-slate-900">
+                                  {letterData.kronologi}
+                                </p>
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Spesifikasi Objek / Kendaraan jika ada */}
+                          {(letterData.vehicleBrand || letterData.vehiclePlate) && (
+                            <>
+                              <p>Adapun jaminan / spesifikasi objek sebagai berikut :</p>
+                              <div className="pl-6 space-y-0.5 mb-2 text-[9pt]">
+                                <div className="grid grid-cols-[180px_10px_1fr]">
+                                  <div>Merk/Type</div><div>:</div><div className="uppercase">{letterData.vehicleBrand}</div>
+                                </div>
+                                <div className="grid grid-cols-[180px_10px_1fr]">
+                                  <div>Nomor Polisi</div><div>:</div><div className="uppercase font-bold">{letterData.vehiclePlate || 'R-1234-XX'}</div>
+                                </div>
+                              </div>
+                            </>
+                          )}
+                        </>
+                      ) : (
+                        /* FORMAT LAMA PENAGIHAN LEMBAGA */
+                        <>
+                          <p>
+                            Untuk melakukan konfirmasi, penagihan, dan negosiasi penyelesaian kewajiban pembayaran atas nama Debitur/Nasabah dari <strong>{letterData.clientName}</strong> yang penagihannya dikuasakan kepada <strong>{letterData.kopCompanyName}</strong>.
+                          </p>
+
+                          <p className="mt-1.5">Berikut data nasabah :</p>
+
+                          <div className="pl-6 space-y-0.5 mb-2 text-[9pt]">
+                            <div className="grid grid-cols-[180px_10px_1fr]">
+                              <div>No. Kontrak</div><div>:</div><div>{letterData.customerContract}</div>
+                            </div>
+                            <div className="grid grid-cols-[180px_10px_1fr]">
+                              <div>Nama</div><div>:</div><div className="uppercase">{letterData.customerName}</div>
+                            </div>
+                            <div className="grid grid-cols-[180px_10px_1fr]">
+                              <div>Alamat</div><div>:</div><div className="uppercase">{formatCleanAddress(letterData.customerAddress)}</div>
+                            </div>
+                            <div className="grid grid-cols-[180px_10px_1fr]">
+                              <div>Tanggal Jatuh Tempo</div><div>:</div><div className="font-bold">{formatDueDate(letterData.customerDueDate)}</div>
+                            </div>
                             <div className="grid grid-cols-[180px_10px_1fr]">
                               <div>Angsuran</div><div>:</div><div>{letterData.customerInstallment}{letterData.customerTotalInstallment ? ` / ${letterData.customerTotalInstallment}` : ''}</div>
                             </div>
                             <div className="grid grid-cols-[180px_10px_1fr]">
                               <div>DENDA</div><div>:</div><div>{letterData.customerPenalty}</div>
                             </div>
-                          </>
-                        )}
-                      </div>
-
-                      {/* Kronologi Singkat / Duduk Perkara */}
-                      {letterData.kronologi && letterData.kronologi.trim() && (
-                        <div className="pl-6 mb-2 text-[9pt]">
-                          <div className="border-l-2 border-[#5A5A40] pl-2.5 py-1 bg-slate-50/70 rounded-r">
-                            <div className="font-bold text-[8.5pt] uppercase tracking-wide text-slate-800 mb-0.5">
-                              Kronologi & Ringkasan Tagihan :
-                            </div>
-                            <p className="text-[8.5pt] leading-normal text-justify whitespace-pre-line text-slate-900">
-                              {letterData.kronologi}
-                            </p>
                           </div>
-                        </div>
-                      )}
 
-                      {/* Spesifikasi Kendaraan */}
-                      {(letterData.vehicleBrand || letterData.vehiclePlate) && (
-                        <>
                           <p>Adapun spesifikasi kendaraan sebagai berikut :</p>
+
                           <div className="pl-6 space-y-0.5 mb-2 text-[9pt]">
                             <div className="grid grid-cols-[180px_10px_1fr]">
                               <div>Merk/Type</div><div>:</div><div className="uppercase">{letterData.vehicleBrand}</div>

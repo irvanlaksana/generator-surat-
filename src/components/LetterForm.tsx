@@ -68,8 +68,17 @@ export default function LetterForm({ data, onChange }: LetterFormProps) {
     }
 
     const parts = [];
-    if (newData.customerAddressDetail) {
-      parts.push(formatCleanAddress(newData.customerAddressDetail));
+    if (newData.customerAddressDetail && newData.customerAddressDetail.trim()) {
+      parts.push(formatCleanAddress(newData.customerAddressDetail.trim()));
+    }
+    const rtClean = (newData.customerRt || '').trim().replace(/^RT\.?\s*/i, '');
+    const rwClean = (newData.customerRw || '').trim().replace(/^RW\.?\s*/i, '');
+    if (rtClean && rwClean) {
+      parts.push(`RT ${rtClean} RW ${rwClean}`);
+    } else if (rtClean) {
+      parts.push(`RT ${rtClean}`);
+    } else if (rwClean) {
+      parts.push(`RW ${rwClean}`);
     }
     if (newData.customerKelurahan) parts.push(`KEL. ${newData.customerKelurahan}`);
     if (newData.customerKecamatan) parts.push(`KEC. ${newData.customerKecamatan}`);
@@ -603,14 +612,14 @@ export default function LetterForm({ data, onChange }: LetterFormProps) {
             <h2 className={headingClass}>
               <span>{data.penagihanType === 'perorangan' ? 'Pemberi Kuasa Perorangan' : 'Klien / Kreditur'}</span>
               <span className="text-[9px] font-semibold text-[#5A5A40] bg-[#5A5A40]/10 px-1.5 py-0.5 rounded">
-                {data.penagihanType === 'perorangan' ? 'Perorangan' : 'Lembaga'}
+                {data.penagihanType === 'perorangan' ? 'Perorangan' : 'Lembaga (Format Lama)'}
               </span>
             </h2>
 
             <div className="space-y-2">
               <div>
                 <label className={labelClass}>
-                  {data.penagihanType === 'perorangan' ? 'Nama Pemberi Kuasa (Kreditur Perorangan)' : 'Kreditur (Multifinance / Leasing / Bank)'}
+                  {data.penagihanType === 'perorangan' ? 'Nama Pemberi Kuasa (Kreditur Perorangan)' : 'Kreditur (Multifinance / Leasing)'}
                 </label>
                 <input 
                   type="text" 
@@ -623,32 +632,32 @@ export default function LetterForm({ data, onChange }: LetterFormProps) {
               </div>
 
               {data.penagihanType === 'perorangan' && (
-                <div>
-                  <label className={labelClass}>NIK Pemberi Kuasa (Opsional)</label>
-                  <input 
-                    type="text" 
-                    name="krediturPeroranganNik" 
-                    value={data.krediturPeroranganNik || ''} 
-                    onChange={handleChange} 
-                    className={inputClass} 
-                    placeholder="Nomor Induk Kependudukan (KTP)"
-                  />
-                </div>
-              )}
+                <>
+                  <div>
+                    <label className={labelClass}>NIK Pemberi Kuasa (Opsional)</label>
+                    <input 
+                      type="text" 
+                      name="krediturPeroranganNik" 
+                      value={data.krediturPeroranganNik || ''} 
+                      onChange={handleChange} 
+                      className={inputClass} 
+                      placeholder="Nomor Induk Kependudukan (KTP)"
+                    />
+                  </div>
 
-              <div>
-                <label className={labelClass}>
-                  {data.penagihanType === 'perorangan' ? 'Dasar Penagihan / Hubungan Hukum' : 'Dasar Penagihan (Opsional)'}
-                </label>
-                <input 
-                  type="text" 
-                  name="dasarPenagihan" 
-                  value={data.dasarPenagihan || ''} 
-                  onChange={handleChange} 
-                  className={inputClass} 
-                  placeholder={data.penagihanType === 'perorangan' ? 'Contoh: Surat Pengakuan Hutang & Kuasa Khusus 10 Jan 2026' : 'Contoh: Perjanjian Pembiayaan Konsumen No. ...'}
-                />
-              </div>
+                  <div>
+                    <label className={labelClass}>Dasar Penagihan / Hubungan Hukum</label>
+                    <input 
+                      type="text" 
+                      name="dasarPenagihan" 
+                      value={data.dasarPenagihan || ''} 
+                      onChange={handleChange} 
+                      className={inputClass} 
+                      placeholder="Contoh: Surat Pengakuan Hutang & Kuasa Khusus 10 Jan 2026"
+                    />
+                  </div>
+                </>
+              )}
 
               <div className="grid grid-cols-2 gap-2">
                 <div>
@@ -699,14 +708,42 @@ export default function LetterForm({ data, onChange }: LetterFormProps) {
               <div className="space-y-2 p-3 border border-slate-200 bg-slate-50/50 rounded-lg">
                 <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">Alamat Nasabah</label>
                 
-                <input 
-                  type="text" 
-                  name="customerAddressDetail" 
-                  value={data.customerAddressDetail || ''} 
-                  onChange={handleAddressChange} 
-                  className={inputClass} 
-                  placeholder="Jalan / RT / RW (Ketik Manual)" 
-                />
+                <div>
+                  <label className={labelClass}>Jalan / Dusun / No. Rumah (Opsional)</label>
+                  <input 
+                    type="text" 
+                    name="customerAddressDetail" 
+                    value={data.customerAddressDetail || ''} 
+                    onChange={handleAddressChange} 
+                    className={inputClass} 
+                    placeholder="Contoh: Jl. Ahmad Yani No. 88 (Opsional)" 
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className={labelClass}>RT</label>
+                    <input 
+                      type="text" 
+                      name="customerRt" 
+                      value={data.customerRt || ''} 
+                      onChange={handleAddressChange} 
+                      className={inputClass} 
+                      placeholder="Contoh: 004 atau 04" 
+                    />
+                  </div>
+                  <div>
+                    <label className={labelClass}>RW</label>
+                    <input 
+                      type="text" 
+                      name="customerRw" 
+                      value={data.customerRw || ''} 
+                      onChange={handleAddressChange} 
+                      className={inputClass} 
+                      placeholder="Contoh: 002 atau 02" 
+                    />
+                  </div>
+                </div>
                 
                 <div className="grid grid-cols-2 gap-2">
                   <div>
@@ -773,7 +810,7 @@ export default function LetterForm({ data, onChange }: LetterFormProps) {
                 </div>
               </div>
               <div>
-                <label className={labelClass}>Jatuh Tempo (contoh: 22-september-2026)</label>
+                <label className={labelClass}>Jatuh Tempo (contoh: 22-September-2026)</label>
                 <div className="relative flex items-center">
                   <input 
                     type="text" 
@@ -782,7 +819,7 @@ export default function LetterForm({ data, onChange }: LetterFormProps) {
                     onChange={handleDueDateChange} 
                     onBlur={handleDueDateBlur}
                     className={`${inputClass} pr-8`} 
-                    placeholder="contoh: 22-september-2026" 
+                    placeholder="contoh: 22-September-2026" 
                   />
                   <div className="absolute right-2 flex items-center justify-center pointer-events-auto">
                     <input
@@ -800,71 +837,8 @@ export default function LetterForm({ data, onChange }: LetterFormProps) {
                   </div>
                 </div>
               </div>
-            </div>
-          </section>
 
-          {/* 5. BESARAN TAGIHAN & KRONOLOGI */}
-          <section className={sectionClass}>
-            <h2 className={headingClass}>
-              <span>Besaran Tagihan & Kronologi</span>
-              <span className="text-[9.5px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
-                Rincian Kewajiban
-              </span>
-            </h2>
-
-            <div className="space-y-2">
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className={labelClass}>
-                    {data.penagihanType === 'perorangan' ? 'Hutang Pokok' : 'Pokok / Angsuran'}
-                  </label>
-                  <input 
-                    type="text" 
-                    name="besaranPokok" 
-                    value={data.besaranPokok || ''} 
-                    onChange={handleChange} 
-                    className={inputClass} 
-                    placeholder="Contoh: Rp 65.000.000" 
-                  />
-                </div>
-                <div>
-                  <label className={labelClass}>Bunga / Denda / Biaya</label>
-                  <input 
-                    type="text" 
-                    name="besaranBungaDenda" 
-                    value={data.besaranBungaDenda || ''} 
-                    onChange={handleChange} 
-                    className={inputClass} 
-                    placeholder="Contoh: Rp 5.000.000" 
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className={labelClass}>Total Tagihan (Wajib Dibayar)</label>
-                  <input 
-                    type="text" 
-                    name="totalTagihan" 
-                    value={data.totalTagihan || ''} 
-                    onChange={handleChange} 
-                    className={`${inputClass} font-bold text-slate-900 border-amber-300 focus:ring-amber-500`} 
-                    placeholder="Contoh: Rp 70.000.000" 
-                  />
-                </div>
-                <div>
-                  <label className={labelClass}>Terbilang</label>
-                  <input 
-                    type="text" 
-                    name="terbilangTagihan" 
-                    value={data.terbilangTagihan || ''} 
-                    onChange={handleChange} 
-                    className={inputClass} 
-                    placeholder="Contoh: Tujuh Puluh Juta Rupiah" 
-                  />
-                </div>
-              </div>
-
+              {/* Format Lama Lembaga: Angsuran, Total Angsuran, Total Denda */}
               {data.penagihanType !== 'perorangan' && (
                 <div className="grid grid-cols-3 gap-2 pt-1 border-t border-slate-100">
                   <div>
@@ -876,25 +850,89 @@ export default function LetterForm({ data, onChange }: LetterFormProps) {
                     <input type="text" name="customerTotalInstallment" value={data.customerTotalInstallment} onChange={handleChange} className={inputClass} placeholder="Contoh: Rp 5.550.000" />
                   </div>
                   <div>
-                    <label className={labelClass}>Denda</label>
+                    <label className={labelClass}>Total Denda</label>
                     <input type="text" name="customerPenalty" value={data.customerPenalty} onChange={handleChange} className={inputClass} placeholder="Contoh: Rp 350.000" />
                   </div>
                 </div>
               )}
-
-              <div>
-                <label className={labelClass}>Kronologi & Duduk Perkara</label>
-                <textarea 
-                  name="kronologi" 
-                  rows={3}
-                  value={data.kronologi || ''} 
-                  onChange={handleChange} 
-                  className={`${inputClass} resize-none leading-relaxed`} 
-                  placeholder="Uraikan riwayat timbulnya hutang/tagihan, batas waktu pembayaran, teguran/somasi yang telah dilakukan, serta kewajiban yang belum diselesaikan..." 
-                />
-              </div>
             </div>
           </section>
+
+          {/* 5. BESARAN TAGIHAN & KRONOLOGI (Hanya untuk Penagihan Perorangan) */}
+          {data.penagihanType === 'perorangan' && (
+            <section className={sectionClass}>
+              <h2 className={headingClass}>
+                <span>Besaran Tagihan & Kronologi (Perorangan)</span>
+                <span className="text-[9.5px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
+                  Rincian Kewajiban
+                </span>
+              </h2>
+
+              <div className="space-y-2">
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className={labelClass}>Hutang Pokok</label>
+                    <input 
+                      type="text" 
+                      name="besaranPokok" 
+                      value={data.besaranPokok || ''} 
+                      onChange={handleChange} 
+                      className={inputClass} 
+                      placeholder="Contoh: Rp 65.000.000" 
+                    />
+                  </div>
+                  <div>
+                    <label className={labelClass}>Bunga / Denda / Biaya</label>
+                    <input 
+                      type="text" 
+                      name="besaranBungaDenda" 
+                      value={data.besaranBungaDenda || ''} 
+                      onChange={handleChange} 
+                      className={inputClass} 
+                      placeholder="Contoh: Rp 5.000.000" 
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className={labelClass}>Total Tagihan (Wajib Dibayar)</label>
+                    <input 
+                      type="text" 
+                      name="totalTagihan" 
+                      value={data.totalTagihan || ''} 
+                      onChange={handleChange} 
+                      className={`${inputClass} font-bold text-slate-900 border-amber-300 focus:ring-amber-500`} 
+                      placeholder="Contoh: Rp 70.000.000" 
+                    />
+                  </div>
+                  <div>
+                    <label className={labelClass}>Terbilang</label>
+                    <input 
+                      type="text" 
+                      name="terbilangTagihan" 
+                      value={data.terbilangTagihan || ''} 
+                      onChange={handleChange} 
+                      className={inputClass} 
+                      placeholder="Contoh: Tujuh Puluh Juta Rupiah" 
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className={labelClass}>Kronologi & Duduk Perkara</label>
+                  <textarea 
+                    name="kronologi" 
+                    rows={3}
+                    value={data.kronologi || ''} 
+                    onChange={handleChange} 
+                    className={`${inputClass} resize-none leading-relaxed`} 
+                    placeholder="Uraikan riwayat timbulnya hutang/tagihan, batas waktu pembayaran, teguran/somasi yang telah dilakukan, serta kewajiban yang belum diselesaikan..." 
+                  />
+                </div>
+              </div>
+            </section>
+          )}
 
           <section className={sectionClass}>
             <h2 className={headingClass}>

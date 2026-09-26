@@ -78,6 +78,8 @@ export interface LetterData {
   customerName: string;
   customerAddress: string;
   customerAddressDetail?: string;
+  customerRt?: string;
+  customerRw?: string;
   customerKabupaten?: string;
   customerKecamatan?: string;
   customerKelurahan?: string;
