@@ -28,11 +28,13 @@ interface FormPanelProps {
   setJenis: (j: VehicleType) => void;
   setChecklist: (c: ChecklistMap) => void;
   onApplyTemplate?: (template: BastData) => void;
+  onSyncFromLetter?: () => void;
 }
 
-export default function FormPanel({ data, set, setJenis, setChecklist, onApplyTemplate }: FormPanelProps) {
+export default function FormPanel({ data, set, setJenis, setChecklist, onApplyTemplate, onSyncFromLetter }: FormPanelProps) {
   const [activeSection, setActiveSection] = useState<'info' | 'kendaraan' | 'checklist' | 'kop' | 'ttd'>('info');
   const [savedKopSuccess, setSavedKopSuccess] = useState(false);
+  const [syncSuccess, setSyncSuccess] = useState(false);
   const checklistDefs = getChecklistDefinitions(data.jenis);
 
   const inputClass =
@@ -168,6 +170,32 @@ export default function FormPanel({ data, set, setJenis, setChecklist, onApplyTe
         </div>
 
         <div className="grid grid-cols-2 gap-1.5">
+          {onSyncFromLetter && (
+            <button
+              type="button"
+              id="btn-sync-surat-tugas-action"
+              onClick={() => {
+                onSyncFromLetter();
+                setSyncSuccess(true);
+                setTimeout(() => setSyncSuccess(false), 2500);
+              }}
+              className="flex items-center justify-center gap-1.5 py-1.5 px-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 rounded-lg font-bold text-[10.5px] transition shadow-2xs cursor-pointer active:scale-95 col-span-2"
+              title="Ambil data semua isian formulir dari isian Surat Tugas secara otomatis"
+            >
+              {syncSuccess ? (
+                <>
+                  <Check size={13} className="text-emerald-600" />
+                  <span>Isian Berhasil Disinkronkan dari Surat Tugas!</span>
+                </>
+              ) : (
+                <>
+                  <FileText size={13} className="text-emerald-700" />
+                  <span>Ambil Isian dari Surat Tugas (Sinkron Otomatis)</span>
+                </>
+              )}
+            </button>
+          )}
+
           <button
             type="button"
             onClick={() => onApplyTemplate?.(CONTOH_RODA4)}

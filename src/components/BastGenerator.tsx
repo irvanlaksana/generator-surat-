@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
-import type { BastData, ChecklistMap, VehicleType, PaperSize } from '../types';
+import type { BastData, ChecklistMap, VehicleType, PaperSize, LetterData } from '../types';
 import { PAPER_SIZES, DEFAULT_PAPER_SIZE } from '../types';
 import { BLANK_DATA, CONTOH_RODA2, CONTOH_RODA4, syncChecklist, emptyChecklist } from '../data/defaults';
 import { getSavedKopTemplate } from '../utils/kopStorage';
@@ -62,6 +62,8 @@ interface BastGeneratorProps {
   onChange?: (data: BastData) => void;
   externalData?: BastData;
   onDataChange?: (data: BastData) => void;
+  letterData?: LetterData;
+  onSyncFromLetter?: () => void;
   paperSize?: PaperSize;
   onPaperSizeChange?: (size: PaperSize) => void;
   onOpenPrintPreview?: () => void;
@@ -73,6 +75,8 @@ export default function BastGenerator({
   onChange: propOnChange,
   externalData,
   onDataChange,
+  letterData,
+  onSyncFromLetter,
   paperSize = DEFAULT_PAPER_SIZE,
   onPaperSizeChange,
   onOpenPrintPreview,
@@ -293,6 +297,18 @@ export default function BastGenerator({
               </p>
             </div>
             <div className="flex gap-1">
+              {onSyncFromLetter && (
+                <button
+                  type="button"
+                  id="btn-sync-surat-tugas-top"
+                  onClick={onSyncFromLetter}
+                  className="flex items-center gap-1 px-2 py-1 text-[10.5px] font-semibold text-emerald-800 hover:text-emerald-950 bg-emerald-50 hover:bg-emerald-100 rounded-md border border-emerald-200 transition cursor-pointer"
+                  title="Ambil dan sinkronkan semua isian dari Surat Tugas"
+                >
+                  <Sparkles size={11} className="text-emerald-600" />
+                  <span>Sinkron</span>
+                </button>
+              )}
               <button
                 type="button"
                 onClick={contoh}
@@ -320,6 +336,7 @@ export default function BastGenerator({
             setJenis={setJenis}
             setChecklist={setChecklist}
             onApplyTemplate={applyTemplate}
+            onSyncFromLetter={onSyncFromLetter}
           />
         </div>
       </aside>

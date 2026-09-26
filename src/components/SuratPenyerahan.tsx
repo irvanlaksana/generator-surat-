@@ -96,7 +96,6 @@ export default function SuratPenyerahan({ data, paperSize = 'f4' }: SuratPenyera
             </p>
             <div className="grid grid-cols-[100px_6px_1fr] gap-y-0.5 leading-snug">
               <div>Nama Lengkap</div><div>:</div><div className="font-bold uppercase text-black">{data.petugasNama || '-'}</div>
-              <div>No. KTP / ID</div><div>:</div><div className="font-mono">{data.petugasNik || '-'}</div>
               <div>Jabatan</div><div>:</div><div>{data.petugasJabatan || '-'}</div>
               <div>Perusahaan</div><div>:</div><div className="font-semibold text-black">{data.perusahaan}</div>
               <div>Cabang</div><div>:</div><div>{data.cabang}</div>

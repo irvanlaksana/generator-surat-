@@ -10,6 +10,7 @@ import { generateLetterNumber } from './utils/letterNumber';
 import { getTodaySignPlaceDate } from './utils/dateFormatter';
 import { CONTOH_RODA4, syncChecklist } from './data/defaults';
 import { getSavedKopTemplate, saveKopTemplate, STORAGE_KEY_LETTER } from './utils/kopStorage';
+import { syncLetterDataToBast } from './utils/syncData';
 
 type DocumentType = 'surat_tugas' | 'bast';
 
@@ -147,7 +148,7 @@ export default function App() {
   const [isDriveModalOpen, setIsDriveModalOpen] = useState(false);
   const [isPrintPreviewOpen, setIsPrintPreviewOpen] = useState(false);
 
-  // Debounced auto-save for LetterData and Kop Template
+  // Debounced auto-save for LetterData and Kop Template + Auto-sync to BAST
   useEffect(() => {
     const timer = setTimeout(() => {
       try {
@@ -155,23 +156,13 @@ export default function App() {
         // Auto-save kop settings as template whenever kopImage or positioning is configured
         if (data.kopImage) {
           saveKopTemplate(data);
-          // Keep bastData's kop in sync if it doesn't have custom override
-          setBastData((prev) => ({
-            ...prev,
-            kopImage: data.kopImage,
-            kopImageHeight: data.kopImageHeight,
-            kopImageFit: data.kopImageFit,
-            kopImageAlign: data.kopImageAlign,
-            kopImageOffsetY: data.kopImageOffsetY,
-            kopImageOffsetX: data.kopImageOffsetX,
-            kopImageMarginBottom: data.kopImageMarginBottom,
-            kopCompanyName: data.kopCompanyName,
-          }));
         }
+        // Auto-sync all overlapping fields from Surat Tugas to BAST & Surat Penyerahan
+        setBastData((prev) => syncLetterDataToBast(data, prev));
       } catch (err) {
         console.error('Failed to save letter to localStorage:', err);
       }
-    }, 350);
+    }, 250);
     return () => clearTimeout(timer);
   }, [data]);
 
@@ -249,7 +240,10 @@ export default function App() {
             <button
               type="button"
               id="tab-bast"
-              onClick={() => setDocType('bast')}
+              onClick={() => {
+                setDocType('bast');
+                setBastData((prev) => syncLetterDataToBast(data, prev));
+              }}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-bold transition-all cursor-pointer ${
                 docType === 'bast'
                   ? 'bg-[#5A5A40] text-white shadow-xs'
@@ -311,6 +305,8 @@ export default function App() {
           <BastGenerator 
             data={bastData} 
             onChange={setBastData}
+            letterData={data}
+            onSyncFromLetter={() => setBastData((prev) => syncLetterDataToBast(data, prev))}
             paperSize={paperSize}
             onPaperSizeChange={setPaperSize}
             onOpenPrintPreview={() => setIsPrintPreviewOpen(true)}
