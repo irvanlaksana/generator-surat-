@@ -1,7 +1,8 @@
 import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { BastData, ChecklistMap, VehicleType, PaperSize } from '../types';
 import { PAPER_SIZES, DEFAULT_PAPER_SIZE } from '../types';
-import { BLANK_DATA, CONTOH_RODA2, CONTOH_RODA4, syncChecklist } from '../data/defaults';
+import { BLANK_DATA, CONTOH_RODA2, CONTOH_RODA4, syncChecklist, emptyChecklist } from '../data/defaults';
+import { getSavedKopTemplate } from '../utils/kopStorage';
 import FormPanel from './FormPanel';
 import SuratPenyerahan from './SuratPenyerahan';
 import BastSheet from './BastSheet';
@@ -15,20 +16,45 @@ const STORAGE_KEY = 'bast-generator-v1';
 type PageMode = 'both' | 'bast' | 'penyerahan';
 
 function loadInitial(): BastData {
+  const savedKop = getSavedKopTemplate();
+  const baseKop: Partial<BastData> = savedKop ? {
+    kopImage: savedKop.kopImage,
+    kopImageHeight: savedKop.kopImageHeight,
+    kopImageFit: savedKop.kopImageFit,
+    kopImageAlign: savedKop.kopImageAlign,
+    kopImageOffsetY: savedKop.kopImageOffsetY,
+    kopImageOffsetX: savedKop.kopImageOffsetX,
+    kopImageMarginBottom: savedKop.kopImageMarginBottom,
+    kopCompanyName: savedKop.kopCompanyName,
+    useImageKop: Boolean(savedKop.kopImage),
+  } : {};
+
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw) as BastData;
       return {
-        ...BLANK_DATA,
+        ...CONTOH_RODA4,
+        ...baseKop,
         ...parsed,
+        kopImage: parsed.kopImage !== undefined ? parsed.kopImage : (savedKop?.kopImage ?? null),
+        kopImageHeight: parsed.kopImageHeight ?? savedKop?.kopImageHeight ?? 120,
+        kopImageFit: parsed.kopImageFit ?? savedKop?.kopImageFit ?? 'contain',
+        kopImageAlign: parsed.kopImageAlign ?? savedKop?.kopImageAlign ?? 'center',
+        kopImageOffsetY: parsed.kopImageOffsetY ?? savedKop?.kopImageOffsetY ?? 0,
+        kopImageOffsetX: parsed.kopImageOffsetX ?? savedKop?.kopImageOffsetX ?? 0,
+        kopImageMarginBottom: parsed.kopImageMarginBottom ?? savedKop?.kopImageMarginBottom ?? 24,
+        useImageKop: parsed.useImageKop !== undefined ? parsed.useImageKop : Boolean(savedKop?.kopImage),
         checklist: syncChecklist(parsed.jenis ?? 'roda4', parsed.checklist ?? {}),
       };
     }
   } catch {
     /* ignore */
   }
-  return CONTOH_RODA4;
+  return {
+    ...CONTOH_RODA4,
+    ...baseKop,
+  };
 }
 
 interface BastGeneratorProps {
@@ -134,8 +160,33 @@ export default function BastGenerator({
       perusahaan: d.perusahaan,
       cabang: d.cabang,
       alamat: d.alamat,
-      checklist: syncChecklist(d.jenis, {}),
+      telepon: d.telepon,
+      kopImage: d.kopImage,
+      kopImageHeight: d.kopImageHeight,
+      kopImageFit: d.kopImageFit,
+      kopImageAlign: d.kopImageAlign,
+      kopImageOffsetY: d.kopImageOffsetY,
+      kopImageOffsetX: d.kopImageOffsetX,
+      kopImageMarginBottom: d.kopImageMarginBottom,
+      kopCompanyName: d.kopCompanyName,
+      useImageKop: d.useImageKop,
+      checklist: emptyChecklist(d.jenis),
     }));
+
+  const applyTemplate = useCallback((template: BastData) => {
+    const savedKop = getSavedKopTemplate();
+    updateData((prev) => ({
+      ...template,
+      kopImage: template.kopImage !== undefined ? template.kopImage : (prev.kopImage ?? savedKop?.kopImage ?? null),
+      kopImageHeight: template.kopImageHeight ?? prev.kopImageHeight ?? savedKop?.kopImageHeight ?? 120,
+      kopImageFit: template.kopImageFit ?? prev.kopImageFit ?? savedKop?.kopImageFit ?? 'contain',
+      kopImageAlign: template.kopImageAlign ?? prev.kopImageAlign ?? savedKop?.kopImageAlign ?? 'center',
+      kopImageOffsetY: template.kopImageOffsetY ?? prev.kopImageOffsetY ?? savedKop?.kopImageOffsetY ?? 0,
+      kopImageOffsetX: template.kopImageOffsetX ?? prev.kopImageOffsetX ?? savedKop?.kopImageOffsetX ?? 0,
+      kopImageMarginBottom: template.kopImageMarginBottom ?? prev.kopImageMarginBottom ?? savedKop?.kopImageMarginBottom ?? 24,
+      useImageKop: template.useImageKop !== undefined ? template.useImageKop : (prev.useImageKop ?? Boolean(savedKop?.kopImage)),
+    }));
+  }, [updateData]);
 
   const zoomBy = (d: number) => {
     setAutoFit(false);
@@ -268,6 +319,7 @@ export default function BastGenerator({
             set={set}
             setJenis={setJenis}
             setChecklist={setChecklist}
+            onApplyTemplate={applyTemplate}
           />
         </div>
       </aside>

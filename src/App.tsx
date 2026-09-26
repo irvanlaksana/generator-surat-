@@ -97,20 +97,45 @@ function loadInitialLetter(): LetterData {
 }
 
 function loadInitialBast(): BastData {
+  const savedKop = getSavedKopTemplate();
+  const baseKop: Partial<BastData> = savedKop ? {
+    kopImage: savedKop.kopImage,
+    kopImageHeight: savedKop.kopImageHeight,
+    kopImageFit: savedKop.kopImageFit,
+    kopImageAlign: savedKop.kopImageAlign,
+    kopImageOffsetY: savedKop.kopImageOffsetY,
+    kopImageOffsetX: savedKop.kopImageOffsetX,
+    kopImageMarginBottom: savedKop.kopImageMarginBottom,
+    kopCompanyName: savedKop.kopCompanyName,
+    useImageKop: Boolean(savedKop.kopImage),
+  } : {};
+
   try {
     const raw = localStorage.getItem(STORAGE_KEY_BAST);
     if (raw) {
       const parsed = JSON.parse(raw) as BastData;
       return {
         ...CONTOH_RODA4,
+        ...baseKop,
         ...parsed,
+        kopImage: parsed.kopImage !== undefined ? parsed.kopImage : (savedKop?.kopImage ?? null),
+        kopImageHeight: parsed.kopImageHeight ?? savedKop?.kopImageHeight ?? 120,
+        kopImageFit: parsed.kopImageFit ?? savedKop?.kopImageFit ?? 'contain',
+        kopImageAlign: parsed.kopImageAlign ?? savedKop?.kopImageAlign ?? 'center',
+        kopImageOffsetY: parsed.kopImageOffsetY ?? savedKop?.kopImageOffsetY ?? 0,
+        kopImageOffsetX: parsed.kopImageOffsetX ?? savedKop?.kopImageOffsetX ?? 0,
+        kopImageMarginBottom: parsed.kopImageMarginBottom ?? savedKop?.kopImageMarginBottom ?? 24,
+        useImageKop: parsed.useImageKop !== undefined ? parsed.useImageKop : Boolean(savedKop?.kopImage),
         checklist: syncChecklist(parsed.jenis ?? 'roda4', parsed.checklist ?? {}),
       };
     }
   } catch {
     /* ignore */
   }
-  return CONTOH_RODA4;
+  return {
+    ...CONTOH_RODA4,
+    ...baseKop,
+  };
 }
 
 export default function App() {
@@ -130,6 +155,18 @@ export default function App() {
         // Auto-save kop settings as template whenever kopImage or positioning is configured
         if (data.kopImage) {
           saveKopTemplate(data);
+          // Keep bastData's kop in sync if it doesn't have custom override
+          setBastData((prev) => ({
+            ...prev,
+            kopImage: data.kopImage,
+            kopImageHeight: data.kopImageHeight,
+            kopImageFit: data.kopImageFit,
+            kopImageAlign: data.kopImageAlign,
+            kopImageOffsetY: data.kopImageOffsetY,
+            kopImageOffsetX: data.kopImageOffsetX,
+            kopImageMarginBottom: data.kopImageMarginBottom,
+            kopCompanyName: data.kopCompanyName,
+          }));
         }
       } catch (err) {
         console.error('Failed to save letter to localStorage:', err);
@@ -137,6 +174,18 @@ export default function App() {
     }, 350);
     return () => clearTimeout(timer);
   }, [data]);
+
+  // Debounced auto-save for BastData
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      try {
+        localStorage.setItem(STORAGE_KEY_BAST, JSON.stringify(bastData));
+      } catch (err) {
+        console.error('Failed to save bast to localStorage:', err);
+      }
+    }, 350);
+    return () => clearTimeout(timer);
+  }, [bastData]);
 
   const handleApplyToLetter = (partial: Partial<LetterData>) => {
     setData((prev) => ({

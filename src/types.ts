@@ -111,6 +111,17 @@ export interface BastData {
   cabang: string;
   alamat: string;
   telepon: string;
+
+  // Kop Surat settings (persisted & synchronized with uploaded kop surat template)
+  kopImage?: string | null;
+  kopImageHeight?: number;
+  kopImageFit?: 'contain' | 'fill' | 'cover';
+  kopImageAlign?: 'left' | 'center' | 'right';
+  kopImageOffsetY?: number;
+  kopImageOffsetX?: number;
+  kopImageMarginBottom?: number;
+  kopCompanyName?: string;
+  useImageKop?: boolean;
   
   // Data Petugas / Pihak Pertama (Penerima)
   petugasNama: string;

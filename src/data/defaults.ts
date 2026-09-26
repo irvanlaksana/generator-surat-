@@ -1,4 +1,4 @@
-import { BastData, ChecklistMap, VehicleType } from '../types';
+import { BastData, ChecklistMap, VehicleType, LetterData } from '../types';
 
 export interface ChecklistDefinition {
   id: string;
@@ -111,14 +111,69 @@ export function syncChecklist(jenis: VehicleType, current: ChecklistMap = {}): C
   return result;
 }
 
+export function emptyChecklist(jenis: VehicleType): ChecklistMap {
+  const defs = getChecklistDefinitions(jenis);
+  const result: ChecklistMap = {};
+  for (const item of defs) {
+    result[item.id] = { status: '' as any, catatan: '' };
+  }
+  return result;
+}
+
+// Data Kosong Murni (Semua field isian kosong untuk Reset Form)
 export const BLANK_DATA: BastData = {
   jenis: 'roda4',
-  nomorBast: '001/BAST/MJI/29/VIII/2026',
-  nomorPenyerahan: '001/SPK/MJI/29/VIII/2026',
+  nomorBast: '',
+  nomorPenyerahan: '',
   perusahaan: 'PT. MITRA JASATRIA INDONESIA',
   cabang: 'Cabang Purwokerto',
   alamat: 'Jl. Gerilya No. 45, Purwokerto Selatan, Banyumas, Jawa Tengah',
   telepon: '(0281) 634567 / 0812-3456-7890',
+  
+  petugasNama: '',
+  petugasNik: '',
+  petugasJabatan: '',
+  petugasHp: '',
+
+  debiturNama: '',
+  debiturNik: '',
+  debiturAlamat: '',
+  debiturHp: '',
+  nomorKontrak: '',
+  krediturLeasing: '',
+
+  kendaraanMerk: '',
+  kendaraanType: '',
+  kendaraanTahun: '',
+  kendaraanWarna: '',
+  kendaraanNoPol: '',
+  kendaraanNoRangka: '',
+  kendaraanNoMesin: '',
+  kendaraanBpkb: '',
+  kendaraanStnk: '',
+  kendaraanOdometer: '',
+  kendaraanBahanBakar: '',
+  kendaraanKondisiMesin: '',
+  kendaraanKondisiBodi: '',
+
+  checklist: emptyChecklist('roda4'),
+
+  kota: 'Purwokerto',
+  tanggal: '',
+
+  saksi1Nama: '',
+  saksi1Jabatan: '',
+  saksi2Nama: '',
+  saksi2Jabatan: '',
+
+  catatanKhusus: '',
+};
+
+export const CONTOH_RODA4: BastData = {
+  ...BLANK_DATA,
+  jenis: 'roda4',
+  nomorBast: '001/BAST/MJI/29/VIII/2026',
+  nomorPenyerahan: '001/SPK/MJI/29/VIII/2026',
   
   petugasNama: 'RIZKY JUANDA SAPUTRA',
   petugasNik: '3302242201940001',
@@ -146,7 +201,15 @@ export const BLANK_DATA: BastData = {
   kendaraanKondisiMesin: 'Hidup Normal / Siap Jalan',
   kendaraanKondisiBodi: 'Bodi mulus terawat, lecet pemakaian wajar di bumper depan bawah.',
 
-  checklist: syncChecklist('roda4'),
+  checklist: syncChecklist('roda4', {
+    stnk_asli: { status: 'baik', catatan: 'STNK Asli Ada & Pajak Aktif' },
+    kunci_kontak: { status: 'baik', catatan: 'Kunci Utama + Remote' },
+    kunci_cadangan: { status: 'baik', catatan: '1 Kunci Cadangan Manual' },
+    ban_serep: { status: 'baik', catatan: 'Ada (Tekanan Angin Cukup)' },
+    dongkrak_handle: { status: 'baik', catatan: 'Ada di Bagasi' },
+    audio_headunit: { status: 'baik', catatan: 'Layar Sentuh & Speaker Normal' },
+    ac_blower: { status: 'baik', catatan: 'AC Dingin & Blower Bersih' },
+  }),
 
   kota: 'Purwokerto',
   tanggal: '29 Agustus 2026',
@@ -164,6 +227,19 @@ export const CONTOH_RODA2: BastData = {
   jenis: 'roda2',
   nomorBast: '002/BAST/MJI/29/VIII/2026',
   nomorPenyerahan: '002/SPK/MJI/29/VIII/2026',
+  
+  petugasNama: 'RIZKY JUANDA SAPUTRA',
+  petugasNik: '3302242201940001',
+  petugasJabatan: 'Petugas Remedial / Eksekusi Penagihan',
+  petugasHp: '0812-9876-5432',
+
+  debiturNama: 'AGUS SETIAWAN',
+  debiturNik: '3302111805950002',
+  debiturAlamat: 'Jl. Pemuda No. 12 RT 01/RW 03, Purwokerto Barat',
+  debiturHp: '0812-2891-7742',
+  nomorKontrak: '00892019 / KAMM-2025',
+  krediturLeasing: 'Koperasi Anugrah Mega Mandiri (KAMM)',
+
   kendaraanMerk: 'YAMAHA',
   kendaraanType: 'VIXION 150 DOHC',
   kendaraanTahun: '2022',
@@ -187,18 +263,73 @@ export const CONTOH_RODA2: BastData = {
     ban_depan: { status: 'baik', catatan: 'Ketebalan 80%' },
     ban_belakang: { status: 'baik', catatan: 'Ketebalan 75%' },
   }),
+
+  kota: 'Purwokerto',
+  tanggal: '29 Agustus 2026',
+
+  saksi1Nama: 'FILEMO HALAWA',
+  saksi1Jabatan: 'Supervisor Remedial / Direktur',
+  saksi2Nama: 'AHMAD FAUZI',
+  saksi2Jabatan: 'Saksi Pihak Keluarga / Rekan',
+
+  catatanKhusus: 'Penyerahan unit kendaraan dilakukan secara sukarela dan tanpa paksaan sehubungan dengan penyelesaian kewajiban pembiayaan.',
 };
 
-export const CONTOH_RODA4: BastData = {
-  ...BLANK_DATA,
-  jenis: 'roda4',
-  checklist: syncChecklist('roda4', {
-    stnk_asli: { status: 'baik', catatan: 'STNK Asli Ada & Pajak Aktif' },
-    kunci_kontak: { status: 'baik', catatan: 'Kunci Utama + Remote' },
-    kunci_cadangan: { status: 'baik', catatan: '1 Kunci Cadangan Manual' },
-    ban_serep: { status: 'baik', catatan: 'Ada (Tekanan Angin Cukup)' },
-    dongkrak_handle: { status: 'baik', catatan: 'Ada di Bagasi' },
-    audio_headunit: { status: 'baik', catatan: 'Layar Sentuh & Speaker Normal' },
-    ac_blower: { status: 'baik', catatan: 'AC Dingin & Blower Bersih' },
-  }),
+// Data Kosong Murni Surat Tugas
+export const BLANK_LETTER_DATA: Partial<LetterData> = {
+  letterNumber: '',
+  assignerName: '',
+  assignerPosition: '',
+  assigneeName: '',
+  assigneePosition: '',
+  clientName: '',
+  customerContract: '',
+  customerName: '',
+  customerAddress: '',
+  customerAddressDetail: '',
+  customerKabupaten: '',
+  customerKecamatan: '',
+  customerKelurahan: '',
+  customerDueDate: '',
+  customerInstallment: '',
+  customerTotalInstallment: '',
+  customerUnpaidInstallmentCount: '',
+  customerPenalty: '',
+  attachments: [],
+  vehicleBrand: '',
+  vehicleBrandMake: '',
+  vehicleBrandModel: '',
+  vehiclePlate: '',
+  validFrom: '',
+  validTo: '',
+  signPlaceDate: '',
+};
+
+// Data Contoh Surat Tugas
+export const CONTOH_LETTER_DATA: Partial<LetterData> = {
+  letterNumber: '001/ST-MJI/VIII/2026',
+  assignerName: 'FILEMO HALAWA',
+  assignerPosition: 'DIREKTUR',
+  assigneeName: 'RIZKY JUANDA SAPUTRA',
+  assigneePosition: 'Petugas Penagihan',
+  clientName: 'Koperasi Anugrah Mega Mandiri (KAMM)',
+  customerContract: '00730191',
+  customerName: 'KISNO ANGKAH TRI HIDAYAT',
+  customerAddressDetail: 'RT 004 RW 002',
+  customerKabupaten: 'BANYUMAS',
+  customerKecamatan: 'PURWOKERTO SELATAN',
+  customerKelurahan: 'TELUK',
+  customerAddress: 'RT 004 RW 002, KEL. TELUK, KEC. PURWOKERTO SELATAN',
+  customerDueDate: '15/08/2026',
+  customerInstallment: 'Rp 1.850.000',
+  customerTotalInstallment: 'Rp 5.550.000',
+  customerUnpaidInstallmentCount: '3',
+  customerPenalty: 'Rp 350.000',
+  vehicleBrand: 'HONDA / HR-V 1.5 E',
+  vehicleBrandMake: 'HONDA',
+  vehicleBrandModel: 'HR-V 1.5 E',
+  vehiclePlate: 'R 4088 YV',
+  validFrom: '2026-08-20',
+  validTo: '2026-08-31',
+  signPlaceDate: 'Purwokerto, 20 Agustus 2026',
 };

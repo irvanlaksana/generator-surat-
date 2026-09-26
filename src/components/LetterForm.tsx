@@ -4,6 +4,7 @@ import { generateOfficialLetterNumber } from '../utils/letterNumber';
 import { formatDateID, formatCleanAddress, formatDateDDMMYYYY, getTodaySignPlaceDate } from '../utils/dateFormatter';
 import { Sparkles, Calendar, Scissors, SlidersHorizontal, Loader2, Undo2, Check, Save, RotateCcw, Image as ImageIcon } from 'lucide-react';
 import { regionData } from '../data/regions';
+import { BLANK_LETTER_DATA, CONTOH_LETTER_DATA } from '../data/defaults';
 import { autoCropDocumentImage } from '../utils/imageAutoCrop';
 import ImageCropModal from './ImageCropModal';
 import { getSavedKopTemplate, saveKopTemplate } from '../utils/kopStorage';
@@ -304,6 +305,38 @@ export default function LetterForm({ data, onChange }: LetterFormProps) {
 
   const [activeCategory, setActiveCategory] = useState<'semua' | 'tugas' | 'nasabah' | 'kop'>('semua');
 
+  const handleResetForm = () => {
+    onChange({
+      ...data,
+      ...BLANK_LETTER_DATA,
+      // Preserve current Kop settings so user's uploaded letterhead isn't lost
+      kopImage: data.kopImage,
+      kopImageHeight: data.kopImageHeight,
+      kopImageFit: data.kopImageFit,
+      kopImageAlign: data.kopImageAlign,
+      kopImageOffsetY: data.kopImageOffsetY,
+      kopImageOffsetX: data.kopImageOffsetX,
+      kopImageMarginBottom: data.kopImageMarginBottom,
+      kopCompanyName: data.kopCompanyName,
+    });
+  };
+
+  const handleApplyContoh = () => {
+    onChange({
+      ...data,
+      ...CONTOH_LETTER_DATA,
+      // Preserve current Kop settings
+      kopImage: data.kopImage,
+      kopImageHeight: data.kopImageHeight,
+      kopImageFit: data.kopImageFit,
+      kopImageAlign: data.kopImageAlign,
+      kopImageOffsetY: data.kopImageOffsetY,
+      kopImageOffsetX: data.kopImageOffsetX,
+      kopImageMarginBottom: data.kopImageMarginBottom,
+      kopCompanyName: data.kopCompanyName,
+    });
+  };
+
   const sectionClass = "bg-white p-3 rounded-xl border border-slate-200 shadow-2xs space-y-2.5";
   const headingClass = "text-xs font-bold text-slate-800 pb-1.5 border-b border-slate-100 uppercase tracking-wider flex items-center justify-between";
   const labelClass = "block text-[10px] uppercase tracking-wider font-bold text-slate-500 mb-0.5";
@@ -349,6 +382,42 @@ export default function LetterForm({ data, onChange }: LetterFormProps) {
         >
           Kop Surat
         </button>
+      </div>
+
+      {/* Preset & Reset Bar for Surat Tugas */}
+      <div className="bg-slate-100/90 border border-slate-200/90 p-2.5 rounded-xl shadow-2xs space-y-2">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-1.5 font-bold text-slate-800 text-[11px]">
+            <Sparkles size={13} className="text-[#5A5A40]" />
+            <span>Preset & Reset Surat Tugas:</span>
+          </div>
+          <span className="text-[9.5px] bg-slate-200 text-slate-700 font-semibold px-1.5 py-0.5 rounded">
+            Cepat Isi
+          </span>
+        </div>
+
+        <div className="grid grid-cols-2 gap-1.5">
+          <button
+            type="button"
+            onClick={handleApplyContoh}
+            className="flex items-center justify-center gap-1.5 py-1.5 px-2 bg-white hover:bg-slate-50 text-slate-800 border border-slate-300 rounded-lg font-bold text-[10.5px] transition shadow-2xs cursor-pointer active:scale-95"
+            title="Muat data contoh Surat Tugas penagihan"
+          >
+            <Sparkles size={12} className="text-[#5A5A40]" />
+            <span>Contoh Data</span>
+          </button>
+
+          <button
+            type="button"
+            id="btn-reset-form-kosong-surat-tugas"
+            onClick={handleResetForm}
+            className="flex items-center justify-center gap-1.5 py-1.5 px-2 bg-rose-50 hover:bg-rose-100 text-rose-800 border border-rose-200 rounded-lg font-bold text-[10.5px] transition shadow-2xs cursor-pointer active:scale-95"
+            title="Kosongkan seluruh isian formulir Surat Tugas (Reset Bersih)"
+          >
+            <RotateCcw size={12} className="text-rose-600" />
+            <span>Kosongkan Semua Field</span>
+          </button>
+        </div>
       </div>
 
       {/* 1. Informasi Surat */}

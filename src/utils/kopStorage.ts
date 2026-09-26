@@ -26,6 +26,20 @@ export function getSavedKopTemplate(): KopTemplateData | null {
   return null;
 }
 
+export function getEffectiveKopSettings(override?: Partial<KopTemplateData>): KopTemplateData {
+  const saved = getSavedKopTemplate();
+  return {
+    kopImage: override?.kopImage !== undefined ? override.kopImage : (saved?.kopImage ?? null),
+    kopImageHeight: override?.kopImageHeight ?? saved?.kopImageHeight ?? 120,
+    kopImageFit: override?.kopImageFit ?? saved?.kopImageFit ?? 'contain',
+    kopImageAlign: override?.kopImageAlign ?? saved?.kopImageAlign ?? 'center',
+    kopImageOffsetY: override?.kopImageOffsetY ?? saved?.kopImageOffsetY ?? 0,
+    kopImageOffsetX: override?.kopImageOffsetX ?? saved?.kopImageOffsetX ?? 0,
+    kopImageMarginBottom: override?.kopImageMarginBottom ?? saved?.kopImageMarginBottom ?? 24,
+    kopCompanyName: override?.kopCompanyName ?? saved?.kopCompanyName ?? 'PT. MITRA JASATRIA INDONESIA',
+  };
+}
+
 export function saveKopTemplate(data: Partial<LetterData>): void {
   try {
     const current = getSavedKopTemplate();
