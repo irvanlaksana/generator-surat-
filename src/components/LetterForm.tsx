@@ -5,6 +5,7 @@ import { formatDateID, formatCleanAddress, formatDateDDMMYYYY, formatDueDate, ge
 import { Sparkles, Calendar, Scissors, SlidersHorizontal, Loader2, Undo2, Check, Save, RotateCcw, Image as ImageIcon } from 'lucide-react';
 import { regionData } from '../data/regions';
 import { BLANK_LETTER_DATA, CONTOH_LETTER_DATA, CONTOH_LETTER_PERORANGAN } from '../data/defaults';
+import { VEHICLE_BRAND_GROUPS, POPULAR_VEHICLE_MODELS } from '../data/vehicles';
 import { autoCropDocumentImage } from '../utils/imageAutoCrop';
 import ImageCropModal from './ImageCropModal';
 import { getSavedKopTemplate, saveKopTemplate } from '../utils/kopStorage';
@@ -99,23 +100,32 @@ export default function LetterForm({ data, onChange }: LetterFormProps) {
     }
   };
 
-  // Derive make and model for Data Kendaraan
-  const currentMake = data.vehicleBrandMake ?? (
-    data.vehicleBrand?.toUpperCase().startsWith('HONDA') ? 'HONDA' :
-    data.vehicleBrand?.toUpperCase().startsWith('YAMAHA') ? 'YAMAHA' :
-    data.vehicleBrand?.toUpperCase().startsWith('SUZUKI') ? 'SUZUKI' : ''
-  );
+  // Derive make and model for Data Kendaraan from all known brands
+  const allKnownVehicleBrands = VEHICLE_BRAND_GROUPS.flatMap((g) => g.brands);
+  const currentMake = data.vehicleBrandMake ?? (() => {
+    if (!data.vehicleBrand) return '';
+    const upper = data.vehicleBrand.toUpperCase().trim();
+    for (const b of allKnownVehicleBrands) {
+      if (upper === b || upper.startsWith(b + ' ') || upper.startsWith(b + '/') || upper.startsWith(b + '-')) {
+        return b;
+      }
+    }
+    return '';
+  })();
 
-  const currentModel = data.vehicleBrandModel ?? (
-    data.vehicleBrand?.includes('/')
-      ? data.vehicleBrand.split('/')[1]?.trim()
-      : (currentMake && data.vehicleBrand?.toUpperCase().startsWith(currentMake)
-          ? data.vehicleBrand.slice(currentMake.length).trim().replace(/^[\/\-\s]+/, '')
-          : (currentMake ? '' : data.vehicleBrand || ''))
-  );
+  const currentModel = data.vehicleBrandModel ?? (() => {
+    if (!data.vehicleBrand) return '';
+    if (data.vehicleBrand.includes('/')) {
+      return data.vehicleBrand.split('/')[1]?.trim() || '';
+    }
+    if (currentMake && data.vehicleBrand.toUpperCase().startsWith(currentMake)) {
+      return data.vehicleBrand.slice(currentMake.length).trim().replace(/^[\/\-\s]+/, '');
+    }
+    return currentMake ? '' : data.vehicleBrand;
+  })();
 
   const handleVehicleMakeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const make = e.target.value;
+    const make = e.target.value === 'LAINNYA' ? '' : e.target.value;
     const model = currentModel;
     const combined = make && model ? `${make} / ${model}` : (make || model);
     onChange({
@@ -956,37 +966,72 @@ export default function LetterForm({ data, onChange }: LetterFormProps) {
             <div className="space-y-2">
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className={labelClass}>Merk</label>
+                  <label className={labelClass}>Merk Kendaraan</label>
                   <select
                     name="vehicleBrandMake"
                     value={currentMake}
                     onChange={handleVehicleMakeChange}
                     className={inputClass}
                   >
-                    <option value="">Pilih Merk...</option>
-                    <option value="HONDA">HONDA</option>
-                    <option value="YAMAHA">YAMAHA</option>
-                    <option value="SUZUKI">SUZUKI</option>
+                    <option value="">Pilih Merk Kendaraan...</option>
+                    {VEHICLE_BRAND_GROUPS.map((grp) => (
+                      <optgroup key={grp.category} label={grp.category}>
+                        {grp.brands.map((b) => (
+                          <option key={`${grp.category}-${b}`} value={b}>
+                            {b}
+                          </option>
+                        ))}
+                      </optgroup>
+                    ))}
+                    <optgroup label="LAINNYA">
+                      <option value="LAINNYA">LAINNYA / KETIK MANUAL</option>
+                    </optgroup>
                   </select>
                 </div>
                 <div>
-                  <label className={labelClass}>Tipe (Ketik Manual)</label>
+                  <label className={labelClass}>Tipe / Varian</label>
                   <input
                     type="text"
                     name="vehicleBrandModel"
+                    list="vehicle-models-datalist"
                     value={currentModel}
                     onChange={handleVehicleModelChange}
                     className={inputClass}
-                    placeholder="Contoh: VARIO 160 / BEAT"
+                    placeholder={
+                      currentMake && POPULAR_VEHICLE_MODELS[currentMake]?.length
+                        ? `Pilih atau ketik tipe (Contoh: ${POPULAR_VEHICLE_MODELS[currentMake][0]})`
+                        : "Ketik tipe kendaraan"
+                    }
                   />
+                  <datalist id="vehicle-models-datalist">
+                    {currentMake && POPULAR_VEHICLE_MODELS[currentMake] ? (
+                      POPULAR_VEHICLE_MODELS[currentMake].map((m) => (
+                        <option key={m} value={m} />
+                      ))
+                    ) : (
+                      ['VARIO 160', 'BEAT ESP', 'NMAX 155', 'AEROX 155', 'SCOOPY', 'ALL NEW AVANZA', 'INNOVA ZENIX', 'CARRY PICK UP', 'GRAN MAX PICK UP', 'XPANDER'].map((m) => (
+                        <option key={m} value={m} />
+                      ))
+                    )}
+                  </datalist>
                 </div>
               </div>
 
-              {data.vehicleBrand && (
-                <p className="text-[11px] text-slate-500 font-mono">
-                  Merk/Tipe di Surat: <span className="font-bold uppercase text-slate-700">{data.vehicleBrand}</span>
-                </p>
-              )}
+              {/* Rangkuman & Edit Manual Merk/Tipe di Surat */}
+              <div className="pt-1.5 border-t border-slate-100 space-y-1">
+                <div className="flex items-center justify-between text-[11px] text-slate-500">
+                  <span className="font-semibold text-slate-600">Merk / Tipe di Surat:</span>
+                  <span className="text-[9.5px] text-slate-400">Otomatis terangkai & dapat diedit</span>
+                </div>
+                <input
+                  type="text"
+                  name="vehicleBrand"
+                  value={data.vehicleBrand || ''}
+                  onChange={handleChange}
+                  className={`${inputClass} font-mono uppercase font-bold text-slate-800 text-[11px] bg-slate-50`}
+                  placeholder="Contoh: HONDA / HR-V 1.5 E atau YAMAHA / NMAX 155"
+                />
+              </div>
 
               <div>
                 <label className={labelClass}>Nomor Polisi</label>
@@ -995,8 +1040,8 @@ export default function LetterForm({ data, onChange }: LetterFormProps) {
                   name="vehiclePlate"
                   value={data.vehiclePlate}
                   onChange={handleChange}
-                  className={`${inputClass} font-bold tracking-wider`}
-                  placeholder="R-1234-XX"
+                  className={`${inputClass} font-bold tracking-wider uppercase font-mono`}
+                  placeholder="Contoh: R 4088 YV / R-1234-XX"
                 />
               </div>
             </div>
