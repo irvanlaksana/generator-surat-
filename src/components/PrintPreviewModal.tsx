@@ -29,7 +29,7 @@ import SuratPenyerahan from './SuratPenyerahan';
 import BastSheet from './BastSheet';
 import jsPDF from 'jspdf';
 import { toJpeg } from 'html-to-image';
-import { formatDateID, formatCleanAddress, formatDateDDMMYYYY } from '../utils/dateFormatter';
+import { formatDateID, formatCleanAddress, formatDateDDMMYYYY, formatDueDate } from '../utils/dateFormatter';
 
 interface PrintPreviewModalProps {
   isOpen: boolean;
@@ -621,42 +621,104 @@ export default function PrintPreviewModal({
                       </div>
 
                       <p>
-                        Untuk melakukan konfirmasi, penagihan, dan negosiasi penyelesaian kewajiban pembayaran atas nama Debitur/Nasabah dari <strong>{letterData.clientName}</strong> yang penagihannya dikuasakan kepada <strong>{letterData.kopCompanyName}</strong>.
+                        {letterData.penagihanType === 'perorangan' ? (
+                          <>
+                            Untuk melakukan konfirmasi, penagihan, mediasi, dan negosiasi penyelesaian kewajiban pembayaran hutang/tagihan atas nama Debitur dari Pemberi Kuasa Perorangan: <strong>{letterData.clientName || '....................................'}</strong>
+                            {letterData.krediturPeroranganNik ? ` (NIK: ${letterData.krediturPeroranganNik})` : ''}
+                            {letterData.dasarPenagihan ? ` berdasarkan ${letterData.dasarPenagihan}` : ''} yang penagihannya dikuasakan kepada <strong>{letterData.kopCompanyName}</strong>.
+                          </>
+                        ) : (
+                          <>
+                            Untuk melakukan konfirmasi, penagihan, dan negosiasi penyelesaian kewajiban pembayaran atas nama Debitur/Nasabah dari <strong>{letterData.clientName || '....................................'}</strong>
+                            {letterData.dasarPenagihan ? ` berdasarkan ${letterData.dasarPenagihan}` : ''} yang penagihannya dikuasakan kepada <strong>{letterData.kopCompanyName}</strong>.
+                          </>
+                        )}
                       </p>
 
-                      <p className="mt-1.5">Berikut data nasabah :</p>
+                      <p className="mt-1.5 font-bold">Berikut rincian data nasabah & kewajiban tagihan :</p>
 
                       <div className="pl-6 space-y-0.5 mb-2 text-[9pt]">
                         <div className="grid grid-cols-[180px_10px_1fr]">
-                          <div>No. Kontrak</div><div>:</div><div>{letterData.customerContract}</div>
+                          <div>{letterData.penagihanType === 'perorangan' ? 'No. Perjanjian / Bukti' : 'No. Kontrak'}</div><div>:</div><div className="font-mono">{letterData.customerContract || '-'}</div>
                         </div>
                         <div className="grid grid-cols-[180px_10px_1fr]">
-                          <div>Nama</div><div>:</div><div className="uppercase">{letterData.customerName}</div>
+                          <div>Nama Debitur</div><div>:</div><div className="uppercase font-bold">{letterData.customerName}</div>
                         </div>
                         <div className="grid grid-cols-[180px_10px_1fr]">
                           <div>Alamat</div><div>:</div><div className="uppercase">{formatCleanAddress(letterData.customerAddress)}</div>
                         </div>
                         <div className="grid grid-cols-[180px_10px_1fr]">
-                          <div>Tanggal Jatuh Tempo</div><div>:</div><div>{formatDateDDMMYYYY(letterData.customerDueDate)}</div>
+                          <div>Tanggal Jatuh Tempo</div><div>:</div><div className="font-bold">{formatDueDate(letterData.customerDueDate)}</div>
                         </div>
-                        <div className="grid grid-cols-[180px_10px_1fr]">
-                          <div>Angsuran</div><div>:</div><div>{letterData.customerInstallment}{letterData.customerTotalInstallment ? ` / ${letterData.customerTotalInstallment}` : ''}</div>
-                        </div>
-                        <div className="grid grid-cols-[180px_10px_1fr]">
-                          <div>DENDA</div><div>:</div><div>{letterData.customerPenalty}</div>
-                        </div>
+
+                        {/* Rincian Besaran Tagihan */}
+                        {letterData.penagihanType === 'perorangan' || letterData.totalTagihan ? (
+                          <>
+                            {letterData.besaranPokok && (
+                              <div className="grid grid-cols-[180px_10px_1fr]">
+                                <div>Hutang Pokok</div><div>:</div><div>{letterData.besaranPokok}</div>
+                              </div>
+                            )}
+                            {letterData.besaranBungaDenda && (
+                              <div className="grid grid-cols-[180px_10px_1fr]">
+                                <div>Bunga / Denda / Biaya</div><div>:</div><div>{letterData.besaranBungaDenda}</div>
+                              </div>
+                            )}
+                            {letterData.totalTagihan && (
+                              <div className="grid grid-cols-[180px_10px_1fr]">
+                                <div className="font-bold">Total Kewajiban Tagihan</div>
+                                <div className="font-bold">:</div>
+                                <div className="font-bold text-[9.5pt]">{letterData.totalTagihan}</div>
+                              </div>
+                            )}
+                            {letterData.terbilangTagihan && (
+                              <div className="grid grid-cols-[180px_10px_1fr]">
+                                <div className="italic text-slate-600 text-[8.5pt]">Terbilang</div>
+                                <div>:</div>
+                                <div className="italic font-medium text-[8.5pt]"># {letterData.terbilangTagihan} #</div>
+                              </div>
+                            )}
+                          </>
+                        ) : (
+                          <>
+                            <div className="grid grid-cols-[180px_10px_1fr]">
+                              <div>Angsuran</div><div>:</div><div>{letterData.customerInstallment}{letterData.customerTotalInstallment ? ` / ${letterData.customerTotalInstallment}` : ''}</div>
+                            </div>
+                            <div className="grid grid-cols-[180px_10px_1fr]">
+                              <div>DENDA</div><div>:</div><div>{letterData.customerPenalty}</div>
+                            </div>
+                          </>
+                        )}
                       </div>
 
-                      <p>Adapun spesifikasi kendaraan sebagai berikut :</p>
+                      {/* Kronologi Singkat / Duduk Perkara */}
+                      {letterData.kronologi && letterData.kronologi.trim() && (
+                        <div className="pl-6 mb-2 text-[9pt]">
+                          <div className="border-l-2 border-[#5A5A40] pl-2.5 py-1 bg-slate-50/70 rounded-r">
+                            <div className="font-bold text-[8.5pt] uppercase tracking-wide text-slate-800 mb-0.5">
+                              Kronologi & Ringkasan Tagihan :
+                            </div>
+                            <p className="text-[8.5pt] leading-normal text-justify whitespace-pre-line text-slate-900">
+                              {letterData.kronologi}
+                            </p>
+                          </div>
+                        </div>
+                      )}
 
-                      <div className="pl-6 space-y-0.5 mb-2 text-[9pt]">
-                        <div className="grid grid-cols-[180px_10px_1fr]">
-                          <div>Merk/Type</div><div>:</div><div className="uppercase">{letterData.vehicleBrand}</div>
-                        </div>
-                        <div className="grid grid-cols-[180px_10px_1fr]">
-                          <div>Nomor Polisi</div><div>:</div><div className="uppercase font-bold">{letterData.vehiclePlate || 'R-1234-XX'}</div>
-                        </div>
-                      </div>
+                      {/* Spesifikasi Kendaraan */}
+                      {(letterData.vehicleBrand || letterData.vehiclePlate) && (
+                        <>
+                          <p>Adapun spesifikasi kendaraan sebagai berikut :</p>
+                          <div className="pl-6 space-y-0.5 mb-2 text-[9pt]">
+                            <div className="grid grid-cols-[180px_10px_1fr]">
+                              <div>Merk/Type</div><div>:</div><div className="uppercase">{letterData.vehicleBrand}</div>
+                            </div>
+                            <div className="grid grid-cols-[180px_10px_1fr]">
+                              <div>Nomor Polisi</div><div>:</div><div className="uppercase font-bold">{letterData.vehiclePlate || 'R-1234-XX'}</div>
+                            </div>
+                          </div>
+                        </>
+                      )}
 
                       <p>Pelaksanaan Surat Tugas ini wajib tunduk dan patuh pada ketentuan sebagai berikut:</p>
 

@@ -54,7 +54,10 @@ export const PAPER_SIZES: Record<PaperSize, PaperSizeConfig> = {
 
 export const DEFAULT_PAPER_SIZE: PaperSize = 'f4';
 
+export type PenagihanType = 'lembaga' | 'perorangan';
+
 export interface LetterData {
+  penagihanType?: PenagihanType;
   kopImage: string | null;
   kopImageHeight: number;
   kopImageFit: 'contain' | 'fill' | 'cover';
@@ -69,6 +72,8 @@ export interface LetterData {
   assigneeName: string;
   assigneePosition: string;
   clientName: string;
+  krediturPeroranganNik?: string;
+  dasarPenagihan?: string;
   customerContract: string;
   customerName: string;
   customerAddress: string;
@@ -81,6 +86,11 @@ export interface LetterData {
   customerTotalInstallment: string;
   customerPenalty: string;
   customerUnpaidInstallmentCount: string;
+  kronologi?: string;
+  besaranPokok?: string;
+  besaranBungaDenda?: string;
+  totalTagihan?: string;
+  terbilangTagihan?: string;
   attachments: AttachmentData[];
   vehicleBrand: string;
   vehicleBrandMake?: string;

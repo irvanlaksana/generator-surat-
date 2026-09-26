@@ -3,7 +3,7 @@ import { LetterData, PaperSize, PAPER_SIZES } from '../types';
 import { FileDown, Loader2, UploadCloud, Printer, Eye, ChevronDown } from 'lucide-react';
 import jsPDF from 'jspdf';
 import { toJpeg } from 'html-to-image';
-import { formatDateID, formatCleanAddress, formatDateDDMMYYYY } from '../utils/dateFormatter';
+import { formatDateID, formatCleanAddress, formatDateDDMMYYYY, formatDueDate } from '../utils/dateFormatter';
 
 interface LetterPreviewProps {
   data: LetterData;
@@ -251,42 +251,104 @@ export default function LetterPreview({
             </div>
 
             <p>
-              Untuk melakukan konfirmasi, penagihan, dan negosiasi penyelesaian kewajiban pembayaran atas nama Debitur/Nasabah dari <strong>{data.clientName}</strong> yang penagihannya dikuasakan kepada <strong>{data.kopCompanyName}</strong>.
+              {data.penagihanType === 'perorangan' ? (
+                <>
+                  Untuk melakukan konfirmasi, penagihan, mediasi, dan negosiasi penyelesaian kewajiban pembayaran hutang/tagihan atas nama Debitur dari Pemberi Kuasa Perorangan: <strong>{data.clientName || '....................................'}</strong>
+                  {data.krediturPeroranganNik ? ` (NIK: ${data.krediturPeroranganNik})` : ''}
+                  {data.dasarPenagihan ? ` berdasarkan ${data.dasarPenagihan}` : ''} yang penagihannya dikuasakan kepada <strong>{data.kopCompanyName}</strong>.
+                </>
+              ) : (
+                <>
+                  Untuk melakukan konfirmasi, penagihan, dan negosiasi penyelesaian kewajiban pembayaran atas nama Debitur/Nasabah dari <strong>{data.clientName || '....................................'}</strong>
+                  {data.dasarPenagihan ? ` berdasarkan ${data.dasarPenagihan}` : ''} yang penagihannya dikuasakan kepada <strong>{data.kopCompanyName}</strong>.
+                </>
+              )}
             </p>
 
-            <p className="mt-1.5">Berikut data nasabah :</p>
+            <p className="mt-1.5 font-bold">Berikut rincian data nasabah & kewajiban tagihan :</p>
             
             <div className="pl-6 space-y-0.5 mb-2 text-[9pt]">
               <div className="grid grid-cols-[180px_10px_1fr]">
-                <div>No. Kontrak</div><div>:</div><div>{data.customerContract}</div>
+                <div>{data.penagihanType === 'perorangan' ? 'No. Perjanjian / Bukti' : 'No. Kontrak'}</div><div>:</div><div className="font-mono">{data.customerContract || '-'}</div>
               </div>
               <div className="grid grid-cols-[180px_10px_1fr]">
-                <div>Nama</div><div>:</div><div className="uppercase">{data.customerName}</div>
+                <div>Nama Debitur</div><div>:</div><div className="uppercase font-bold">{data.customerName}</div>
               </div>
               <div className="grid grid-cols-[180px_10px_1fr]">
                 <div>Alamat</div><div>:</div><div className="uppercase">{formatCleanAddress(data.customerAddress)}</div>
               </div>
               <div className="grid grid-cols-[180px_10px_1fr]">
-                <div>Tanggal Jatuh Tempo</div><div>:</div><div>{formatDateDDMMYYYY(data.customerDueDate)}</div>
+                <div>Tanggal Jatuh Tempo</div><div>:</div><div className="font-bold">{formatDueDate(data.customerDueDate)}</div>
               </div>
-              <div className="grid grid-cols-[180px_10px_1fr]">
-                <div>Angsuran</div><div>:</div><div>{data.customerInstallment}{data.customerTotalInstallment ? ` / ${data.customerTotalInstallment}` : ''}</div>
-              </div>
-              <div className="grid grid-cols-[180px_10px_1fr]">
-                <div>DENDA</div><div>:</div><div>{data.customerPenalty}</div>
-              </div>
+
+              {/* Rincian Besaran Tagihan */}
+              {data.penagihanType === 'perorangan' || data.totalTagihan ? (
+                <>
+                  {data.besaranPokok && (
+                    <div className="grid grid-cols-[180px_10px_1fr]">
+                      <div>Hutang Pokok</div><div>:</div><div>{data.besaranPokok}</div>
+                    </div>
+                  )}
+                  {data.besaranBungaDenda && (
+                    <div className="grid grid-cols-[180px_10px_1fr]">
+                      <div>Bunga / Denda / Biaya</div><div>:</div><div>{data.besaranBungaDenda}</div>
+                    </div>
+                  )}
+                  {data.totalTagihan && (
+                    <div className="grid grid-cols-[180px_10px_1fr]">
+                      <div className="font-bold">Total Kewajiban Tagihan</div>
+                      <div className="font-bold">:</div>
+                      <div className="font-bold text-[9.5pt]">{data.totalTagihan}</div>
+                    </div>
+                  )}
+                  {data.terbilangTagihan && (
+                    <div className="grid grid-cols-[180px_10px_1fr]">
+                      <div className="italic text-slate-600 text-[8.5pt]">Terbilang</div>
+                      <div>:</div>
+                      <div className="italic font-medium text-[8.5pt]"># {data.terbilangTagihan} #</div>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <>
+                  <div className="grid grid-cols-[180px_10px_1fr]">
+                    <div>Angsuran</div><div>:</div><div>{data.customerInstallment}{data.customerTotalInstallment ? ` / ${data.customerTotalInstallment}` : ''}</div>
+                  </div>
+                  <div className="grid grid-cols-[180px_10px_1fr]">
+                    <div>DENDA</div><div>:</div><div>{data.customerPenalty}</div>
+                  </div>
+                </>
+              )}
             </div>
 
-            <p>Adapun spesifikasi kendaraan sebagai berikut :</p>
-            
-            <div className="pl-6 space-y-0.5 mb-2 text-[9pt]">
-              <div className="grid grid-cols-[180px_10px_1fr]">
-                <div>Merk/Type</div><div>:</div><div className="uppercase">{data.vehicleBrand}</div>
+            {/* Kronologi Singkat / Duduk Perkara */}
+            {data.kronologi && data.kronologi.trim() && (
+              <div className="pl-6 mb-2 text-[9pt]">
+                <div className="border-l-2 border-[#5A5A40] pl-2.5 py-1 bg-slate-50/70 rounded-r">
+                  <div className="font-bold text-[8.5pt] uppercase tracking-wide text-slate-800 mb-0.5">
+                    Kronologi & Ringkasan Tagihan :
+                  </div>
+                  <p className="text-[8.5pt] leading-normal text-justify whitespace-pre-line text-slate-900">
+                    {data.kronologi}
+                  </p>
+                </div>
               </div>
-              <div className="grid grid-cols-[180px_10px_1fr]">
-                <div>Nomor Polisi</div><div>:</div><div className="uppercase font-bold">{data.vehiclePlate || 'R-1234-XX'}</div>
-              </div>
-            </div>
+            )}
+
+            {/* Spesifikasi Kendaraan (hanya jika ada data kendaraan atau leasing) */}
+            {(data.vehicleBrand || data.vehiclePlate) && (
+              <>
+                <p>Adapun spesifikasi kendaraan sebagai berikut :</p>
+                <div className="pl-6 space-y-0.5 mb-2 text-[9pt]">
+                  <div className="grid grid-cols-[180px_10px_1fr]">
+                    <div>Merk/Type</div><div>:</div><div className="uppercase">{data.vehicleBrand}</div>
+                  </div>
+                  <div className="grid grid-cols-[180px_10px_1fr]">
+                    <div>Nomor Polisi</div><div>:</div><div className="uppercase font-bold">{data.vehiclePlate || 'R-1234-XX'}</div>
+                  </div>
+                </div>
+              </>
+            )}
 
             <p>Pelaksanaan Surat Tugas ini wajib tunduk dan patuh pada ketentuan sebagai berikut:</p>
 

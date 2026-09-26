@@ -1,3 +1,46 @@
+export const formatDueDate = (dateString: string): string => {
+  if (!dateString) return '';
+  const trimmed = dateString.trim();
+
+  const months = [
+    'januari', 'februari', 'maret', 'april', 'mei', 'juni',
+    'juli', 'agustus', 'september', 'oktober', 'november', 'desember'
+  ];
+
+  // If DD/MM/YYYY or D/M/YYYY
+  if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(trimmed)) {
+    const [d, m, y] = trimmed.split('/');
+    const monthIndex = parseInt(m, 10) - 1;
+    const monthName = months[monthIndex] || m;
+    return `${d.padStart(2, '0')}-${monthName}-${y}`;
+  }
+
+  // If DD-MM-YYYY or D-M-YYYY with numeric month
+  if (/^\d{1,2}-\d{1,2}-\d{4}$/.test(trimmed)) {
+    const [d, m, y] = trimmed.split('-');
+    const monthIndex = parseInt(m, 10) - 1;
+    const monthName = months[monthIndex] || m;
+    return `${d.padStart(2, '0')}-${monthName}-${y}`;
+  }
+
+  // If YYYY-MM-DD
+  if (/^\d{4}-\d{1,2}-\d{1,2}$/.test(trimmed)) {
+    const [y, m, d] = trimmed.split('-');
+    const monthIndex = parseInt(m, 10) - 1;
+    const monthName = months[monthIndex] || m;
+    return `${d.padStart(2, '0')}-${monthName}-${y}`;
+  }
+
+  // If format already like "22-September-2026" or "22 September 2026"
+  const textMonthMatch = trimmed.match(/^(\d{1,2})[\s\-]+([a-zA-Z]+)[\s\-]+(\d{4})$/);
+  if (textMonthMatch) {
+    const [, d, mStr, y] = textMonthMatch;
+    return `${d.padStart(2, '0')}-${mStr.toLowerCase()}-${y}`;
+  }
+
+  return trimmed.toLowerCase();
+};
+
 export const formatDateID = (dateString: string): string => {
   if (!dateString) return '';
   // Check if it's YYYY-MM-DD

@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { LetterData, AttachmentData } from '../types';
 import { generateOfficialLetterNumber } from '../utils/letterNumber';
-import { formatDateID, formatCleanAddress, formatDateDDMMYYYY, getTodaySignPlaceDate } from '../utils/dateFormatter';
+import { formatDateID, formatCleanAddress, formatDateDDMMYYYY, formatDueDate, getTodaySignPlaceDate } from '../utils/dateFormatter';
 import { Sparkles, Calendar, Scissors, SlidersHorizontal, Loader2, Undo2, Check, Save, RotateCcw, Image as ImageIcon } from 'lucide-react';
 import { regionData } from '../data/regions';
-import { BLANK_LETTER_DATA, CONTOH_LETTER_DATA } from '../data/defaults';
+import { BLANK_LETTER_DATA, CONTOH_LETTER_DATA, CONTOH_LETTER_PERORANGAN } from '../data/defaults';
 import { autoCropDocumentImage } from '../utils/imageAutoCrop';
 import ImageCropModal from './ImageCropModal';
 import { getSavedKopTemplate, saveKopTemplate } from '../utils/kopStorage';
@@ -48,13 +48,22 @@ export default function LetterForm({ data, onChange }: LetterFormProps) {
 
     if (name === 'customerKecamatan') {
       let detectedKab = '';
-      for (const [kab, kecMap] of Object.entries(regionData)) {
-        if (kecMap[value]) {
-          detectedKab = kab;
-          break;
+      let kecName = value;
+      if (value.includes('|')) {
+        const parts = value.split('|');
+        detectedKab = parts[0];
+        kecName = parts[1];
+        newData.customerKabupaten = detectedKab;
+        newData.customerKecamatan = kecName;
+      } else {
+        for (const [kab, kecMap] of Object.entries(regionData)) {
+          if (kecMap[value]) {
+            detectedKab = kab;
+            break;
+          }
         }
+        newData.customerKabupaten = detectedKab;
       }
-      newData.customerKabupaten = detectedKab;
       newData.customerKelurahan = '';
     }
 
@@ -72,16 +81,13 @@ export default function LetterForm({ data, onChange }: LetterFormProps) {
   };
 
   const handleDueDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    let val = e.target.value;
-    // Allow digits and /
-    val = val.replace(/[^\d/]/g, '');
-    const digits = val.replace(/\D/g, '');
-    if (digits.length > 2 && digits.length <= 4 && !val.includes('/')) {
-      val = `${digits.slice(0, 2)}/${digits.slice(2)}`;
-    } else if (digits.length > 4 && val.split('/').length <= 2) {
-      val = `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4, 8)}`;
+    onChange({ ...data, customerDueDate: e.target.value });
+  };
+
+  const handleDueDateBlur = () => {
+    if (data.customerDueDate && data.customerDueDate.trim()) {
+      onChange({ ...data, customerDueDate: formatDueDate(data.customerDueDate) });
     }
-    onChange({ ...data, customerDueDate: val });
   };
 
   // Derive make and model for Data Kendaraan
@@ -337,6 +343,22 @@ export default function LetterForm({ data, onChange }: LetterFormProps) {
     });
   };
 
+  const handleApplyContohPerorangan = () => {
+    onChange({
+      ...data,
+      ...CONTOH_LETTER_PERORANGAN,
+      // Preserve current Kop settings
+      kopImage: data.kopImage,
+      kopImageHeight: data.kopImageHeight,
+      kopImageFit: data.kopImageFit,
+      kopImageAlign: data.kopImageAlign,
+      kopImageOffsetY: data.kopImageOffsetY,
+      kopImageOffsetX: data.kopImageOffsetX,
+      kopImageMarginBottom: data.kopImageMarginBottom,
+      kopCompanyName: data.kopCompanyName,
+    });
+  };
+
   const sectionClass = "bg-white p-3 rounded-xl border border-slate-200 shadow-2xs space-y-2.5";
   const headingClass = "text-xs font-bold text-slate-800 pb-1.5 border-b border-slate-100 uppercase tracking-wider flex items-center justify-between";
   const labelClass = "block text-[10px] uppercase tracking-wider font-bold text-slate-500 mb-0.5";
@@ -371,7 +393,7 @@ export default function LetterForm({ data, onChange }: LetterFormProps) {
             activeCategory === 'nasabah' ? 'bg-white text-slate-900 shadow-xs font-bold' : 'text-slate-600 hover:text-slate-900'
           }`}
         >
-          Debitur
+          Debitur & Tagihan
         </button>
         <button
           type="button"
@@ -396,26 +418,67 @@ export default function LetterForm({ data, onChange }: LetterFormProps) {
           </span>
         </div>
 
-        <div className="grid grid-cols-2 gap-1.5">
+        <div className="grid grid-cols-3 gap-1.5">
           <button
             type="button"
             onClick={handleApplyContoh}
-            className="flex items-center justify-center gap-1.5 py-1.5 px-2 bg-white hover:bg-slate-50 text-slate-800 border border-slate-300 rounded-lg font-bold text-[10.5px] transition shadow-2xs cursor-pointer active:scale-95"
-            title="Muat data contoh Surat Tugas penagihan"
+            className="flex items-center justify-center gap-1 py-1.5 px-1.5 bg-white hover:bg-slate-50 text-slate-800 border border-slate-300 rounded-lg font-bold text-[10px] transition shadow-2xs cursor-pointer active:scale-95"
+            title="Muat data contoh Surat Tugas leasing kendaraan"
           >
-            <Sparkles size={12} className="text-[#5A5A40]" />
-            <span>Contoh Data</span>
+            <Sparkles size={11} className="text-[#5A5A40]" />
+            <span>Contoh Leasing</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={handleApplyContohPerorangan}
+            className="flex items-center justify-center gap-1 py-1.5 px-1.5 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-lg font-bold text-[10px] transition shadow-2xs cursor-pointer active:scale-95"
+            title="Muat data contoh Surat Tugas penagihan perorangan (hutang piutang)"
+          >
+            <Sparkles size={11} className="text-amber-700" />
+            <span>Contoh Perorangan</span>
           </button>
 
           <button
             type="button"
             id="btn-reset-form-kosong-surat-tugas"
             onClick={handleResetForm}
-            className="flex items-center justify-center gap-1.5 py-1.5 px-2 bg-rose-50 hover:bg-rose-100 text-rose-800 border border-rose-200 rounded-lg font-bold text-[10.5px] transition shadow-2xs cursor-pointer active:scale-95"
+            className="flex items-center justify-center gap-1 py-1.5 px-1.5 bg-rose-50 hover:bg-rose-100 text-rose-800 border border-rose-200 rounded-lg font-bold text-[10px] transition shadow-2xs cursor-pointer active:scale-95"
             title="Kosongkan seluruh isian formulir Surat Tugas (Reset Bersih)"
           >
-            <RotateCcw size={12} className="text-rose-600" />
-            <span>Kosongkan Semua Field</span>
+            <RotateCcw size={11} className="text-rose-600" />
+            <span>Kosongkan</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Switcher Jenis Penagihan */}
+      <div className="bg-white p-2.5 rounded-xl border border-slate-200 shadow-2xs space-y-1.5">
+        <label className="block text-[10px] font-bold text-slate-700 uppercase tracking-wider">
+          Jenis Penagihan:
+        </label>
+        <div className="grid grid-cols-2 gap-1.5">
+          <button
+            type="button"
+            onClick={() => onChange({ ...data, penagihanType: 'lembaga' })}
+            className={`py-1.5 px-2 rounded-lg font-bold text-xs transition border cursor-pointer text-center ${
+              data.penagihanType !== 'perorangan'
+                ? 'bg-[#5A5A40] text-white border-[#5A5A40] shadow-xs'
+                : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
+            }`}
+          >
+            🏢 Lembaga / Leasing
+          </button>
+          <button
+            type="button"
+            onClick={() => onChange({ ...data, penagihanType: 'perorangan' })}
+            className={`py-1.5 px-2 rounded-lg font-bold text-xs transition border cursor-pointer text-center ${
+              data.penagihanType === 'perorangan'
+                ? 'bg-[#5A5A40] text-white border-[#5A5A40] shadow-xs'
+                : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
+            }`}
+          >
+            👤 Penagihan Perorangan
           </button>
         </div>
       </div>
@@ -538,14 +601,55 @@ export default function LetterForm({ data, onChange }: LetterFormProps) {
         <>
           <section className={sectionClass}>
             <h2 className={headingClass}>
-              <span>Klien / Multifinance</span>
+              <span>{data.penagihanType === 'perorangan' ? 'Pemberi Kuasa Perorangan' : 'Klien / Kreditur'}</span>
+              <span className="text-[9px] font-semibold text-[#5A5A40] bg-[#5A5A40]/10 px-1.5 py-0.5 rounded">
+                {data.penagihanType === 'perorangan' ? 'Perorangan' : 'Lembaga'}
+              </span>
             </h2>
 
             <div className="space-y-2">
               <div>
-                <label className={labelClass}>Kreditur (Multifinance / Leasing)</label>
-                <input type="text" name="clientName" value={data.clientName} onChange={handleChange} className={inputClass} />
+                <label className={labelClass}>
+                  {data.penagihanType === 'perorangan' ? 'Nama Pemberi Kuasa (Kreditur Perorangan)' : 'Kreditur (Multifinance / Leasing / Bank)'}
+                </label>
+                <input 
+                  type="text" 
+                  name="clientName" 
+                  value={data.clientName} 
+                  onChange={handleChange} 
+                  className={inputClass} 
+                  placeholder={data.penagihanType === 'perorangan' ? 'Nama Lengkap Pemberi Kuasa Pribadi' : 'Nama Lembaga / Leasing'}
+                />
               </div>
+
+              {data.penagihanType === 'perorangan' && (
+                <div>
+                  <label className={labelClass}>NIK Pemberi Kuasa (Opsional)</label>
+                  <input 
+                    type="text" 
+                    name="krediturPeroranganNik" 
+                    value={data.krediturPeroranganNik || ''} 
+                    onChange={handleChange} 
+                    className={inputClass} 
+                    placeholder="Nomor Induk Kependudukan (KTP)"
+                  />
+                </div>
+              )}
+
+              <div>
+                <label className={labelClass}>
+                  {data.penagihanType === 'perorangan' ? 'Dasar Penagihan / Hubungan Hukum' : 'Dasar Penagihan (Opsional)'}
+                </label>
+                <input 
+                  type="text" 
+                  name="dasarPenagihan" 
+                  value={data.dasarPenagihan || ''} 
+                  onChange={handleChange} 
+                  className={inputClass} 
+                  placeholder={data.penagihanType === 'perorangan' ? 'Contoh: Surat Pengakuan Hutang & Kuasa Khusus 10 Jan 2026' : 'Contoh: Perjanjian Pembiayaan Konsumen No. ...'}
+                />
+              </div>
+
               <div className="grid grid-cols-2 gap-2">
                 <div>
                   <label className={labelClass}>Berlaku Mulai</label>
@@ -568,25 +672,27 @@ export default function LetterForm({ data, onChange }: LetterFormProps) {
             <div className="space-y-2">
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className={labelClass}>No. Kontrak</label>
+                  <label className={labelClass}>
+                    {data.penagihanType === 'perorangan' ? 'No. Perjanjian / Bukti' : 'No. Kontrak'}
+                  </label>
                   <input 
                     type="text" 
                     name="customerContract" 
                     value={data.customerContract} 
                     onChange={handleChange} 
                     className={inputClass} 
-                    placeholder="Nomor Kontrak Nasabah"
+                    placeholder={data.penagihanType === 'perorangan' ? 'Contoh: SPH/08/I/2026' : 'Nomor Kontrak Nasabah'}
                   />
                 </div>
                 <div>
-                  <label className={labelClass}>Nama Nasabah</label>
+                  <label className={labelClass}>Nama Debitur / Nasabah</label>
                   <input 
                     type="text" 
                     name="customerName" 
                     value={data.customerName} 
                     onChange={handleChange} 
                     className={inputClass} 
-                    placeholder="Nama Lengkap Nasabah"
+                    placeholder="Nama Lengkap Debitur"
                   />
                 </div>
               </div>
@@ -605,12 +711,19 @@ export default function LetterForm({ data, onChange }: LetterFormProps) {
                 <div className="grid grid-cols-2 gap-2">
                   <div>
                     <label className={labelClass}>Kecamatan</label>
-                    <select name="customerKecamatan" value={data.customerKecamatan || ''} onChange={handleAddressChange} className={inputClass}>
+                    <select 
+                      name="customerKecamatan" 
+                      value={data.customerKabupaten && data.customerKecamatan ? `${data.customerKabupaten}|${data.customerKecamatan}` : data.customerKecamatan || ''} 
+                      onChange={handleAddressChange} 
+                      className={inputClass}
+                    >
                       <option value="">Pilih Kecamatan...</option>
                       {Object.entries(regionData).map(([kab, kecs]) => (
-                        <optgroup key={kab} label={`KAB. ${kab}`}>
+                        <optgroup key={kab} label={`KAB. / WILAYAH ${kab}`}>
                           {Object.keys(kecs).map(kec => (
-                            <option key={`${kab}-${kec}`} value={kec}>{kec}</option>
+                            <option key={`${kab}-${kec}`} value={`${kab}|${kec}`}>
+                              {kec} ({kab})
+                            </option>
                           ))}
                         </optgroup>
                       ))}
@@ -618,33 +731,58 @@ export default function LetterForm({ data, onChange }: LetterFormProps) {
                   </div>
                   <div>
                     <label className={labelClass}>Kelurahan / Desa</label>
-                    <select name="customerKelurahan" value={data.customerKelurahan || ''} onChange={handleAddressChange} className={inputClass} disabled={!data.customerKecamatan}>
-                      <option value="">Pilih Kelurahan/Desa...</option>
-                      {data.customerKabupaten && data.customerKecamatan && regionData[data.customerKabupaten]?.[data.customerKecamatan] && regionData[data.customerKabupaten][data.customerKecamatan].map(kel => (
-                        <option key={kel} value={kel}>{kel}</option>
-                      ))}
-                    </select>
+                    {(() => {
+                      const availableKelurahans = (
+                        (data.customerKabupaten && data.customerKecamatan && regionData[data.customerKabupaten]?.[data.customerKecamatan]) ||
+                        (data.customerKecamatan && Object.values(regionData).find(m => m[data.customerKecamatan])?.[data.customerKecamatan]) ||
+                        []
+                      );
+                      return (
+                        <select 
+                          name="customerKelurahan" 
+                          value={data.customerKelurahan || ''} 
+                          onChange={handleAddressChange} 
+                          className={inputClass} 
+                          disabled={!data.customerKecamatan}
+                        >
+                          <option value="">
+                            {data.customerKecamatan ? 'Pilih Kelurahan/Desa...' : 'Pilih Kecamatan dulu'}
+                          </option>
+                          {availableKelurahans.map(kel => (
+                            <option key={kel} value={kel}>{kel}</option>
+                          ))}
+                        </select>
+                      );
+                    })()}
                   </div>
                 </div>
-                {data.customerAddress && (
-                  <div className="mt-2 pt-1.5 border-t border-slate-200/80 flex items-start gap-1.5 text-[11px] text-slate-500">
-                    <span className="font-semibold text-slate-600 shrink-0">Alamat di Surat:</span>
-                    <span className="font-mono text-slate-800 uppercase break-words">
-                      {formatCleanAddress(data.customerAddress)}
-                    </span>
+                
+                <div className="mt-2 pt-1.5 border-t border-slate-200/80 space-y-1">
+                  <div className="flex items-center justify-between text-[11px] text-slate-500">
+                    <span className="font-semibold text-slate-600">Alamat di Surat:</span>
+                    <span className="text-[9.5px] text-slate-400">Dapat diedit manual</span>
                   </div>
-                )}
+                  <input
+                    type="text"
+                    name="customerAddress"
+                    value={data.customerAddress || ''}
+                    onChange={handleChange}
+                    className={`${inputClass} font-mono uppercase text-[11px] bg-slate-50`}
+                    placeholder="Contoh: RT 004 RW 002, KEL. TELUK, KEC. PURWOKERTO SELATAN"
+                  />
+                </div>
               </div>
               <div>
-                <label className={labelClass}>Jatuh Tempo (DD/MM/YYYY)</label>
+                <label className={labelClass}>Jatuh Tempo (contoh: 22-september-2026)</label>
                 <div className="relative flex items-center">
                   <input 
                     type="text" 
                     name="customerDueDate" 
                     value={data.customerDueDate} 
                     onChange={handleDueDateChange} 
+                    onBlur={handleDueDateBlur}
                     className={`${inputClass} pr-8`} 
-                    placeholder="DD/MM/YYYY (contoh: 25/09/2026)" 
+                    placeholder="contoh: 22-september-2026" 
                   />
                   <div className="absolute right-2 flex items-center justify-center pointer-events-auto">
                     <input
@@ -654,8 +792,7 @@ export default function LetterForm({ data, onChange }: LetterFormProps) {
                       title="Pilih tanggal dari kalender"
                       onChange={(e) => {
                         if (e.target.value) {
-                          const [y, m, d] = e.target.value.split('-');
-                          onChange({ ...data, customerDueDate: `${d}/${m}/${y}` });
+                          onChange({ ...data, customerDueDate: formatDueDate(e.target.value) });
                         }
                       }}
                     />
@@ -663,26 +800,120 @@ export default function LetterForm({ data, onChange }: LetterFormProps) {
                   </div>
                 </div>
               </div>
-              <div className="grid grid-cols-3 gap-2">
+            </div>
+          </section>
+
+          {/* 5. BESARAN TAGIHAN & KRONOLOGI */}
+          <section className={sectionClass}>
+            <h2 className={headingClass}>
+              <span>Besaran Tagihan & Kronologi</span>
+              <span className="text-[9.5px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
+                Rincian Kewajiban
+              </span>
+            </h2>
+
+            <div className="space-y-2">
+              <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className={labelClass}>Angsuran</label>
-                  <input type="text" name="customerInstallment" value={data.customerInstallment} onChange={handleChange} className={inputClass} placeholder="Contoh: Rp 385.000" />
+                  <label className={labelClass}>
+                    {data.penagihanType === 'perorangan' ? 'Hutang Pokok' : 'Pokok / Angsuran'}
+                  </label>
+                  <input 
+                    type="text" 
+                    name="besaranPokok" 
+                    value={data.besaranPokok || ''} 
+                    onChange={handleChange} 
+                    className={inputClass} 
+                    placeholder="Contoh: Rp 65.000.000" 
+                  />
                 </div>
                 <div>
-                  <label className={labelClass}>Total Angsuran</label>
-                  <input type="text" name="customerTotalInstallment" value={data.customerTotalInstallment} onChange={handleChange} className={inputClass} placeholder="Contoh: Rp 4.235.000" />
+                  <label className={labelClass}>Bunga / Denda / Biaya</label>
+                  <input 
+                    type="text" 
+                    name="besaranBungaDenda" 
+                    value={data.besaranBungaDenda || ''} 
+                    onChange={handleChange} 
+                    className={inputClass} 
+                    placeholder="Contoh: Rp 5.000.000" 
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className={labelClass}>Total Tagihan (Wajib Dibayar)</label>
+                  <input 
+                    type="text" 
+                    name="totalTagihan" 
+                    value={data.totalTagihan || ''} 
+                    onChange={handleChange} 
+                    className={`${inputClass} font-bold text-slate-900 border-amber-300 focus:ring-amber-500`} 
+                    placeholder="Contoh: Rp 70.000.000" 
+                  />
                 </div>
                 <div>
-                  <label className={labelClass}>Total Denda</label>
-                  <input type="text" name="customerPenalty" value={data.customerPenalty} onChange={handleChange} className={inputClass} placeholder="Contoh: Rp 41.692.000" />
+                  <label className={labelClass}>Terbilang</label>
+                  <input 
+                    type="text" 
+                    name="terbilangTagihan" 
+                    value={data.terbilangTagihan || ''} 
+                    onChange={handleChange} 
+                    className={inputClass} 
+                    placeholder="Contoh: Tujuh Puluh Juta Rupiah" 
+                  />
                 </div>
+              </div>
+
+              {data.penagihanType !== 'perorangan' && (
+                <div className="grid grid-cols-3 gap-2 pt-1 border-t border-slate-100">
+                  <div>
+                    <label className={labelClass}>Angsuran</label>
+                    <input type="text" name="customerInstallment" value={data.customerInstallment} onChange={handleChange} className={inputClass} placeholder="Contoh: Rp 1.850.000" />
+                  </div>
+                  <div>
+                    <label className={labelClass}>Total Angsuran</label>
+                    <input type="text" name="customerTotalInstallment" value={data.customerTotalInstallment} onChange={handleChange} className={inputClass} placeholder="Contoh: Rp 5.550.000" />
+                  </div>
+                  <div>
+                    <label className={labelClass}>Denda</label>
+                    <input type="text" name="customerPenalty" value={data.customerPenalty} onChange={handleChange} className={inputClass} placeholder="Contoh: Rp 350.000" />
+                  </div>
+                </div>
+              )}
+
+              <div>
+                <label className={labelClass}>Kronologi & Duduk Perkara</label>
+                <textarea 
+                  name="kronologi" 
+                  rows={3}
+                  value={data.kronologi || ''} 
+                  onChange={handleChange} 
+                  className={`${inputClass} resize-none leading-relaxed`} 
+                  placeholder="Uraikan riwayat timbulnya hutang/tagihan, batas waktu pembayaran, teguran/somasi yang telah dilakukan, serta kewajiban yang belum diselesaikan..." 
+                />
               </div>
             </div>
           </section>
 
           <section className={sectionClass}>
             <h2 className={headingClass}>
-              <span>Data Kendaraan</span>
+              <span>Data Kendaraan {data.penagihanType === 'perorangan' ? '(Opsional)' : ''}</span>
+              {data.penagihanType === 'perorangan' && (data.vehicleBrand || data.vehiclePlate) && (
+                <button
+                  type="button"
+                  onClick={() => onChange({
+                    ...data,
+                    vehicleBrand: '',
+                    vehicleBrandMake: '',
+                    vehicleBrandModel: '',
+                    vehiclePlate: ''
+                  })}
+                  className="text-[9.5px] text-rose-600 hover:underline font-bold cursor-pointer"
+                >
+                  Kosongkan Kendaraan
+                </button>
+              )}
             </h2>
             <div className="space-y-2">
               <div className="grid grid-cols-2 gap-2">
