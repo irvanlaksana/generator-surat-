@@ -679,6 +679,19 @@ export default function LetterForm({ data, onChange }: LetterFormProps) {
                   <input type="date" name="validTo" value={data.validTo} onChange={handleChange} className={inputClass} />
                 </div>
               </div>
+
+              <div className="pt-1.5 border-t border-slate-100 flex items-center justify-between">
+                <label className="text-[10px] text-slate-600 font-medium cursor-pointer flex items-center gap-1.5 select-none">
+                  <input
+                    type="checkbox"
+                    name="showDetailedClauses"
+                    checked={!!data.showDetailedClauses}
+                    onChange={(e) => onChange({ ...data, showDetailedClauses: e.target.checked })}
+                    className="rounded border-slate-300 text-[#5A5A40] focus:ring-[#5A5A40]"
+                  />
+                  <span>Sertakan Klausul Lengkap (Wewenang, Larangan, Sanksi)</span>
+                </label>
+              </div>
             </div>
           </section>
 

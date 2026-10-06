@@ -542,7 +542,7 @@ export default function PrintPreviewModal({
                       paddingRight: '18mm',
                       paddingBottom: '10mm',
                     }}
-                    className={`relative bg-white shadow-[0_25px_60px_rgba(0,0,0,0.45)] border border-slate-300 font-serif text-[9pt] leading-[1.24] box-border text-black print-document-sheet ${
+                    className={`relative bg-white shadow-[0_25px_60px_rgba(0,0,0,0.45)] border border-slate-300 font-serif text-[8pt] leading-[1.24] box-border text-black print-document-sheet ${
                       hasAttachments && activePageIndex === 0 ? 'print-page-break' : 'print-page-last'
                     } ${
                       showGuidelines ? 'outline outline-1 outline-dashed outline-rose-400' : ''
@@ -574,7 +574,7 @@ export default function PrintPreviewModal({
                           }}
                         />
                       ) : (
-                        <div className="border-[2px] border-dashed border-[#D1D1CA] bg-[#F5F5F0] p-6 text-center text-[#8A8A7A] text-[10pt] font-sans rounded-xl">
+                        <div className="border-[2px] border-dashed border-[#D1D1CA] bg-[#F5F5F0] p-6 text-center text-[#8A8A7A] text-[8pt] font-sans rounded-xl">
                           [ Area Kop Surat ]
                         </div>
                       )}
@@ -582,14 +582,14 @@ export default function PrintPreviewModal({
 
                     {/* Title Section */}
                     <div className="text-center mb-1.5">
-                      <h2 className="font-bold underline text-[11pt] tracking-wider uppercase">Surat Tugas</h2>
-                      <p className="font-bold text-[8.5pt] font-mono tracking-wide mt-0.5 bg-slate-100/70 inline-block px-2 py-0.5 border border-slate-300 rounded">
+                      <h2 className="font-bold underline text-[8pt] tracking-wider uppercase">Surat Tugas</h2>
+                      <p className="font-bold text-[8pt] font-mono tracking-wide mt-0.5 bg-slate-100/70 inline-block px-2 py-0.5 border border-slate-300 rounded">
                         Nomor: {letterData.letterNumber}
                       </p>
                     </div>
 
                     {/* Body */}
-                    <div className="space-y-0 text-justify letter-content text-[9pt] leading-[1.24]">
+                    <div className="space-y-0 text-justify letter-content text-[8pt] leading-[1.24]">
                       <p>Yang bertanda tangan di bawah ini, mewakili Manajemen <strong>{letterData.kopCompanyName}</strong>:</p>
 
                       <div className="pl-6 space-y-0.5 my-1.5">
@@ -604,7 +604,7 @@ export default function PrintPreviewModal({
                       <p>Dengan ini memberikan tugas penuh, wewenang, dan tanggung jawab penagihan di lapangan kepada :</p>
 
                       <div className="my-1.5 pl-6">
-                        <table className="w-full text-left font-bold mb-1 text-[9pt]">
+                        <table className="w-full text-left font-bold mb-1 text-[8pt]">
                           <thead>
                             <tr>
                               <th className="pb-1 w-[50%]">Nama</th>
@@ -630,7 +630,7 @@ export default function PrintPreviewModal({
 
                           <p className="mt-1.5 font-bold">Berikut rincian data debitur & besaran tagihan :</p>
 
-                          <div className="pl-6 space-y-0.5 mb-2 text-[9pt]">
+                          <div className="pl-6 space-y-0.5 mb-2 text-[8pt]">
                             <div className="grid grid-cols-[180px_10px_1fr]">
                               <div>No. Perjanjian / Bukti</div><div>:</div><div className="font-mono">{letterData.customerContract || '-'}</div>
                             </div>
@@ -657,26 +657,26 @@ export default function PrintPreviewModal({
                               <div className="grid grid-cols-[180px_10px_1fr]">
                                 <div className="font-bold">Total Kewajiban Tagihan</div>
                                 <div className="font-bold">:</div>
-                                <div className="font-bold text-[9.5pt]">{letterData.totalTagihan}</div>
+                                <div className="font-bold text-[8pt]">{letterData.totalTagihan}</div>
                               </div>
                             )}
                             {letterData.terbilangTagihan && (
                               <div className="grid grid-cols-[180px_10px_1fr]">
-                                <div className="italic text-slate-600 text-[8.5pt]">Terbilang</div>
+                                <div className="italic text-slate-600 text-[8pt]">Terbilang</div>
                                 <div>:</div>
-                                <div className="italic font-medium text-[8.5pt]"># {letterData.terbilangTagihan} #</div>
+                                <div className="italic font-medium text-[8pt]"># {letterData.terbilangTagihan} #</div>
                               </div>
                             )}
                           </div>
 
                           {/* Kronologi Singkat / Duduk Perkara (Khusus Perorangan) */}
                           {letterData.kronologi && letterData.kronologi.trim() && (
-                            <div className="pl-6 mb-2 text-[9pt]">
+                            <div className="pl-6 mb-2 text-[8pt]">
                               <div className="border-l-2 border-[#5A5A40] pl-2.5 py-1 bg-slate-50/70 rounded-r">
-                                <div className="font-bold text-[8.5pt] uppercase tracking-wide text-slate-800 mb-0.5">
+                                <div className="font-bold text-[8pt] uppercase tracking-wide text-slate-800 mb-0.5">
                                   Kronologi & Duduk Perkara :
                                 </div>
-                                <p className="text-[8.5pt] leading-normal text-justify whitespace-pre-line text-slate-900">
+                                <p className="text-[8pt] leading-normal text-justify whitespace-pre-line text-slate-900">
                                   {letterData.kronologi}
                                 </p>
                               </div>
@@ -687,7 +687,7 @@ export default function PrintPreviewModal({
                           {(letterData.vehicleBrand || letterData.vehiclePlate) && (
                             <>
                               <p>Adapun jaminan / spesifikasi objek sebagai berikut :</p>
-                              <div className="pl-6 space-y-0.5 mb-2 text-[9pt]">
+                              <div className="pl-6 space-y-0.5 mb-2 text-[8pt]">
                                 <div className="grid grid-cols-[180px_10px_1fr]">
                                   <div>Merk/Type</div><div>:</div><div className="uppercase">{letterData.vehicleBrand}</div>
                                 </div>
@@ -707,7 +707,7 @@ export default function PrintPreviewModal({
 
                           <p className="mt-1.5">Berikut data nasabah :</p>
 
-                          <div className="pl-6 space-y-0.5 mb-2 text-[9pt]">
+                          <div className="pl-6 space-y-0.5 mb-2 text-[8pt]">
                             <div className="grid grid-cols-[180px_10px_1fr]">
                               <div>No. Kontrak</div><div>:</div><div>{letterData.customerContract}</div>
                             </div>
@@ -730,7 +730,7 @@ export default function PrintPreviewModal({
 
                           <p>Adapun spesifikasi kendaraan sebagai berikut :</p>
 
-                          <div className="pl-6 space-y-0.5 mb-2 text-[9pt]">
+                          <div className="pl-6 space-y-0.5 mb-2 text-[8pt]">
                             <div className="grid grid-cols-[180px_10px_1fr]">
                               <div>Merk/Type</div><div>:</div><div className="uppercase">{letterData.vehicleBrand}</div>
                             </div>
@@ -743,41 +743,48 @@ export default function PrintPreviewModal({
 
                       <p>Pelaksanaan Surat Tugas ini wajib tunduk dan patuh pada ketentuan sebagai berikut:</p>
 
-                      <div className="space-y-0 text-[9pt] leading-[1.24]">
-                        <div className="text-center font-bold mt-1.5 mb-0.5 text-[9pt]">MASA BERLAKU SURAT TUGAS</div>
-                        <p>
-                          Surat Tugas ini berlaku efektif terhitung sejak tanggal {formatDateID(letterData.validFrom)} sampai dengan tanggal {formatDateID(letterData.validTo)}. Apabila masa berlaku telah berakhir, Surat Tugas ini dinyatakan tidak berlaku lagi dan wajib diperpanjang melalui persetujuan Manajemen {letterData.kopCompanyName}.
-                        </p>
-
-                        <div className="text-center font-bold mt-1.5 mb-0.5 text-[9pt]">WEWENANG DAN TANGGUNG JAWAB PETUGAS</div>
-                        <p>Dalam menjalankan tugas penagihan di lapangan, Tim Penagihan berwenang:</p>
-                        <ul className="list-disc pl-6 space-y-0.5 text-[8.5pt] leading-[1.2]">
-                          <li className="pl-1.5">Mendatangi alamat domisili, kantor, atau lokasi tempat usaha Debitur sesuai data resmi yang tercantum dalam lembar kerja penagihan.</li>
-                          <li className="pl-1.5">Melakukan konfirmasi, negosiasi, dan menyampaikan Surat Peringatan (SP) atau tagihan resmi yang diterbitkan oleh Perusahaan/Kreditur/Mitra Perusahaan.</li>
-                          <li className="pl-1.5">Untuk keperluan diatas, PENERIMA TUGAS berhak untuk menerima jaminan piutang/jaminan fidusia, menandatangani dokumen - dokumen, meminta tanda tangan, serta melakukan tindakan yang dianggap perlu dalam melaksanakan tugas tersebut/meminta bantuan pihak berwajib jika diperlukan.</li>
+                      {/* Ketentuan Pelaksanaan Tugas (Poin-poin tanpa judul) */}
+                      <div className="space-y-1 text-[8pt] leading-[1.24]">
+                        <ul className="list-disc pl-6 space-y-0.5 text-[8pt] leading-[1.22] text-justify">
+                          <li className="pl-1.5">
+                            Surat Tugas ini berlaku efektif terhitung sejak tanggal {formatDateID(letterData.validFrom)} sampai dengan tanggal {formatDateID(letterData.validTo)}. Apabila masa berlaku telah berakhir, Surat Tugas ini dinyatakan tidak berlaku lagi dan wajib diperpanjang melalui persetujuan Manajemen {letterData.kopCompanyName}.
+                          </li>
+                          <li className="pl-1.5">
+                            Dalam menjalankan tugas penagihan di lapangan, Tim Penagihan berwenang mendatangi alamat domisili, kantor, atau lokasi tempat usaha Debitur sesuai data resmi yang tercantum dalam lembar kerja penagihan.
+                          </li>
+                          <li className="pl-1.5">
+                            Melakukan konfirmasi, negosiasi, dan menyampaikan Surat Peringatan (SP) atau tagihan resmi yang diterbitkan oleh Perusahaan/Kreditur/Mitra Perusahaan.
+                          </li>
+                          <li className="pl-1.5">
+                            Untuk keperluan diatas, PENERIMA TUGAS berhak untuk menerima jaminan piutang/jaminan fidusia, menandatangani dokumen - dokumen, meminta tanda tangan, serta melakukan tindakan yang dianggap perlu dalam melaksanakan tugas tersebut/meminta bantuan pihak berwajib jika diperlukan.
+                          </li>
+                          <li className="pl-1.5">
+                            Dilarang menerima pembayaran tunai (cash) secara langsung dari Debitur dalam bentuk apa pun, kecuali menggunakan Virtual Account resmi atau tanda terima sah dari sistem perusahaan.
+                          </li>
+                          <li className="pl-1.5">
+                            Dilarang menggunakan ancaman, kekerasan fisik, intimidasi, penekanan secara psikologis, atau tindakan melawan hukum yang melanggar Kode Etik Penagihan Bank Indonesia (BI), Otoritas Jasa Keuangan (OJK), serta Peraturan Perundang-undangan Republik Indonesia.
+                          </li>
+                          <li className="pl-1.5">
+                            Petugas wajib bersikap sopan, profesional, mengenakan pakaian rapi dan sopan selama berada di lapangan.
+                          </li>
+                          <li className="pl-1.5">
+                            Petugas wajib melaporkan hasil penagihan (Field Report) secara real-time melalui sistem aplikasi penagihan resmi {letterData.kopCompanyName} pada hari yang sama.
+                          </li>
+                          <li className="pl-1.5">
+                            Setiap pelanggaran terhadap kode etik, penyalahgunaan wewenang, penggelapan dana penagihan, atau tindakan penyimpangan yang dilakukan oleh Petugas Penagihan akan dikenakan sanksi tegas berupa Pemutusan Hubungan Kerja (PHK) secara tidak hormat.
+                          </li>
+                          <li className="pl-1.5">
+                            Tindakan pelanggaran hukum yang dilakukan oleh Petugas di luar prosedur resmi Perusahaan menjadi tanggung jawab pribadi petugas bersangkutan secara pidana maupun perdata ({letterData.kopCompanyName} membebaskan diri dari segala tuntutan hukum akibat penyimpangan oknum).
+                          </li>
                         </ul>
 
-                        <div className="text-center font-bold mt-1.5 mb-0.5 text-[9pt]">LARANGAN DAN KEPATUHAN</div>
-                        <ul className="list-disc pl-6 space-y-0.5 text-[8.5pt] leading-[1.2]">
-                          <li className="pl-1.5">Dilarang menerima pembayaran tunai (cash) secara langsung dari Debitur dalam bentuk apa pun, kecuali menggunakan Virtual Account resmi atau tanda terima sah dari sistem perusahaan.</li>
-                          <li className="pl-1.5">Dilarang menggunakan ancaman, kekerasan fisik, intimidasi, penekanan secara psikologis, atau tindakan melawan hukum yang melanggar Kode Etik Penagihan Bank Indonesia (BI), Otoritas Jasa Keuangan (OJK), serta Peraturan Perundang-undangan Republik Indonesia.</li>
-                          <li className="pl-1.5">Petugas wajib bersikap sopan, profesional, mengenakan pakaian rapi dan sopan selama berada di lapangan.</li>
-                          <li className="pl-1.5">Petugas wajib melaporkan hasil penagihan (Field Report) secara real-time melalui sistem aplikasi penagihan resmi {letterData.kopCompanyName} pada hari yang sama.</li>
-                        </ul>
-
-                        <div className="text-center font-bold mt-1.5 mb-0.5 text-[9pt]">SANKSI DAN TANGGUNG JAWAB HUKUM</div>
-                        <ul className="list-disc pl-6 space-y-0.5 text-[8.5pt] leading-[1.2]">
-                          <li className="pl-1.5">Setiap pelanggaran terhadap kode etik, penyalahgunaan wewenang, penggelapan dana penagihan, atau tindakan penyimpangan yang dilakukan oleh Petugas Penagihan akan dikenakan sanksi tegas berupa Pemutusan Hubungan Kerja (PHK) secara tidak hormat.</li>
-                          <li className="pl-1.5">Tindakan pelanggaran hukum yang dilakukan oleh Petugas di luar prosedur resmi Perusahaan menjadi tanggung jawab pribadi petugas bersangkutan secara pidana maupun perdata ({letterData.kopCompanyName} membebaskan diri dari segala tuntutan hukum akibat penyimpangan oknum).</li>
-                        </ul>
-
-                        <p className="mt-1.5 pt-0.5">
+                        <p className="mt-1.5 pt-0.5 text-[8pt]">
                           Demikian Surat Tugas ini diterbitkan untuk dipergunakan sebagaimana mestinya dan dilaksanakan dengan penuh rasa tanggung jawab demi menjaga integritas, profesionalisme, dan nama baik {letterData.kopCompanyName} serta Kreditur.
                         </p>
                       </div>
 
                       {/* Signatures */}
-                      <div className="mt-3 flex justify-between break-inside-avoid text-[9pt]">
+                      <div className="mt-3 flex justify-between break-inside-avoid text-[8pt]">
                         <div className="w-[260px]">
                           <p className="mb-8"><br/>Pemberi Tugas,<br/>{letterData.kopCompanyName}</p>
                           <p className="font-bold underline">{letterData.assignerName}</p>

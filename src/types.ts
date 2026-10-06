@@ -101,6 +101,7 @@ export interface LetterData {
   validFrom: string;
   validTo: string;
   signPlaceDate: string;
+  showDetailedClauses?: boolean;
 }
 
 export type VehicleType = 'roda2' | 'roda4';

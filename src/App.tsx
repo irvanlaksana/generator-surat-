@@ -48,7 +48,8 @@ const initialData: LetterData = {
   vehiclePlate: 'R-1234-XX',
   validFrom: '2026-08-21',
   validTo: '2026-08-31',
-  signPlaceDate: getTodaySignPlaceDate('Purwokerto')
+  signPlaceDate: getTodaySignPlaceDate('Purwokerto'),
+  showDetailedClauses: false,
 };
 
 const STORAGE_KEY_BAST = 'bast-generator-v1';

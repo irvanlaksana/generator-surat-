@@ -313,6 +313,7 @@ export const BLANK_LETTER_DATA: Partial<LetterData> = {
   validFrom: '',
   validTo: '',
   signPlaceDate: '',
+  showDetailedClauses: false,
 };
 
 // Data Contoh Surat Tugas (Lembaga Pembiayaan / Leasing)
@@ -352,6 +353,7 @@ export const CONTOH_LETTER_DATA: Partial<LetterData> = {
   validFrom: '2026-08-20',
   validTo: '2026-08-31',
   signPlaceDate: 'Purwokerto, 20 Agustus 2026',
+  showDetailedClauses: false,
 };
 
 // Data Contoh Surat Tugas (Penagihan Perorangan / Hutang Piutang Pribadi)
@@ -391,4 +393,5 @@ export const CONTOH_LETTER_PERORANGAN: Partial<LetterData> = {
   validFrom: '2026-08-20',
   validTo: '2026-08-31',
   signPlaceDate: 'Purwokerto, 20 Agustus 2026',
+  showDetailedClauses: false,
 };
